@@ -26,12 +26,36 @@ struct CrateSpec {
 }
 
 const CONSTITUTIONAL_CRATES: &[CrateSpec] = &[
-    CrateSpec { name: "vr-definitions", layer: 0, logical_time: 0 },
-    CrateSpec { name: "vr-jcs", layer: 1, logical_time: 1000 },
-    CrateSpec { name: "vr-time", layer: 1, logical_time: 1001 },
-    CrateSpec { name: "vr-receipt", layer: 2, logical_time: 2000 },
-    CrateSpec { name: "vr-rbh", layer: 3, logical_time: 3000 },
-    CrateSpec { name: "vr-verifier", layer: 4, logical_time: 4000 },
+    CrateSpec {
+        name: "vr-definitions",
+        layer: 0,
+        logical_time: 0,
+    },
+    CrateSpec {
+        name: "vr-jcs",
+        layer: 1,
+        logical_time: 1000,
+    },
+    CrateSpec {
+        name: "vr-time",
+        layer: 1,
+        logical_time: 1001,
+    },
+    CrateSpec {
+        name: "vr-receipt",
+        layer: 2,
+        logical_time: 2000,
+    },
+    CrateSpec {
+        name: "vr-rbh",
+        layer: 3,
+        logical_time: 3000,
+    },
+    CrateSpec {
+        name: "vr-verifier",
+        layer: 4,
+        logical_time: 4000,
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -44,8 +68,7 @@ fn collect_rs_files(
     dir: &Path,
     out: &mut Vec<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut entries: Vec<_> = std::fs::read_dir(dir)?
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut entries: Vec<_> = std::fs::read_dir(dir)?.collect::<Result<Vec<_>, _>>()?;
     entries.sort_by_key(std::fs::DirEntry::file_name);
 
     for entry in entries {
@@ -107,11 +130,7 @@ fn file_digest(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
 /// Extract a field value from a TOML file within a specific section.
 ///
 /// Looks for `[section]` header, then finds `field = "value"` within it.
-fn extract_field_from_section(
-    content: &str,
-    section: &str,
-    field: &str,
-) -> Option<String> {
+fn extract_field_from_section(content: &str, section: &str, field: &str) -> Option<String> {
     let section_header = format!("[{section}]");
     let mut in_section = false;
 
@@ -139,14 +158,10 @@ fn extract_field_from_section(
 // ---------------------------------------------------------------------------
 
 fn capture_toolchain() -> Result<(String, String), Box<dyn std::error::Error>> {
-    let version_output = Command::new("rustc")
-        .arg("--version")
-        .output()?;
+    let version_output = Command::new("rustc").arg("--version").output()?;
     let rustc_version = String::from_utf8(version_output.stdout)?.trim().to_string();
 
-    let verbose_output = Command::new("rustc")
-        .arg("-vV")
-        .output()?;
+    let verbose_output = Command::new("rustc").arg("-vV").output()?;
     let verbose = String::from_utf8(verbose_output.stdout)?;
     let host = verbose
         .lines()
@@ -295,8 +310,10 @@ fn verify_artifacts(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    eprintln!("  chain: VALID (length={}, integrity=true, ordering=true)",
-        result.chain_validation.as_ref().map_or(0, |cv| cv.length));
+    eprintln!(
+        "  chain: VALID (length={}, integrity=true, ordering=true)",
+        result.chain_validation.as_ref().map_or(0, |cv| cv.length)
+    );
 
     Ok(())
 }
@@ -337,9 +354,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // context_digest: BLAKE3(canonical {authority_set_digest, policy_digest})
     let context_digest_hex = compute_context_digest(&authority_set_hex, &policy_digest_hex)?;
     // schema_digest: BLAKE3 of schema identifier string
-    let schema_digest_hex = hex::encode(
-        blake3::hash(b"GovernanceReceipt.schema.json").as_bytes(),
-    );
+    let schema_digest_hex = hex::encode(blake3::hash(b"GovernanceReceipt.schema.json").as_bytes());
 
     eprintln!("\n=== Generating Envelopes ===");
 
@@ -349,7 +364,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for spec in CONSTITUTIONAL_CRATES {
         let spec_dir = crates_dir.join(spec.name);
         let manifest_path = spec_dir.join("governance").join("manifest.toml");
-        let known_nd_path = spec_dir.join("governance").join("known-nondeterminism.toml");
+        let known_nd_path = spec_dir
+            .join("governance")
+            .join("known-nondeterminism.toml");
 
         // Read manifest
         let manifest_content = std::fs::read_to_string(&manifest_path)?;
@@ -413,7 +430,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         parent_hash = Some(event_hash);
         envelopes.push(envelope);
 
-        eprintln!("  {} (layer={}, time={}): OK", spec.name, spec.layer, spec.logical_time);
+        eprintln!(
+            "  {} (layer={}, time={}): OK",
+            spec.name, spec.layer, spec.logical_time
+        );
     }
 
     // Write chain
