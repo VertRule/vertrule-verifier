@@ -1,0 +1,5 @@
+{
+  "description": "Signature bundle with corrupted signature bytes. Verifier must reject.",
+  "expected_error": "SignatureInvalid",
+  "expected_result": "fail"
+}

@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vertrule.dev/schemas/governance-receipt.json",
+  "title": "GovernanceReceipt",
+  "description": "Cryptographic receipt for governed repository changes",
+  "type": "object",
+  "required": [
+    "receipt_id",
+    "receipt_type",
+    "domain",
+    "context",
+    "operation",
+    "timestamp",
+    "epoch",
+    "signatures"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^blake3:[a-f0-9]{64}$",
+      "description": "BLAKE3 digest of canonical receipt content (JCS)"
+    },
+    "parent_id": {
+      "type": ["string", "null"],
+      "pattern": "^blake3:[a-f0-9]{64}$",
+      "description": "Previous receipt in governance chain (null for genesis)"
+    },
+    "receipt_type": {
+      "type": "string",
+      "enum": [
+        "GovernanceChange",
+        "PolicyPackProposal",
+        "PolicyPackActivation",
+        "AuthoritySetUpdate",
+        "KeyRevocation",
+        "GateOutput"
+      ]
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^governance\\.[a-z]+\\.v[0-9]+$",
+      "description": "Receipt domain (e.g., governance.repo.v1)"
+    },
+    "context": {
+      "$ref": "#/$defs/GovernanceContext"
+    },
+    "operation": {
+      "$ref": "#/$defs/GovernanceOperation"
+    },
+    "gate_outputs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/GateOutput"
+      },
+      "description": "Gate results keyed by gate name"
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Logical timestamp from injected clock"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Authority set epoch at time of signing"
+    },
+    "signatures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Signature" },
+      "minItems": 1,
+      "description": "Authority signatures meeting threshold"
+    }
+  },
+  "$defs": {
+    "GovernanceContext": {
+      "type": "object",
+      "required": ["policy_digest", "authority_set_digest", "repo_state_digest"],
+      "properties": {
+        "policy_digest": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$",
+          "description": "Digest of active policy packs"
+        },
+        "authority_set_digest": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$",
+          "description": "Digest of authority set + revocations"
+        },
+        "repo_state_digest": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$",
+          "description": "Git tree hash or equivalent"
+        },
+        "schema_digest": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$",
+          "description": "Digest of receipt schemas"
+        }
+      }
+    },
+    "GovernanceOperation": {
+      "type": "object",
+      "required": ["operation_type", "diff_digest"],
+      "properties": {
+        "operation_type": {
+          "type": "string",
+          "enum": [
+            "PolicyChange",
+            "AuthorityChange",
+            "SchemaChange",
+            "CoreCodeChange",
+            "InfraChange"
+          ]
+        },
+        "diff_digest": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$"
+        },
+        "paths_touched": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "justification": {
+          "type": "string",
+          "description": "Human-readable justification"
+        }
+      }
+    },
+    "GateOutput": {
+      "type": "object",
+      "required": ["gate_name", "status", "output_digest"],
+      "properties": {
+        "gate_name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_started", "skipped"]
+        },
+        "output_digest": {
+          "type": "string",
+          "pattern": "^blake3:[a-f0-9]{64}$"
+        },
+        "reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "violations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Violation" }
+        }
+      }
+    },
+    "Violation": {
+      "type": "object",
+      "required": ["path", "line", "rule", "message"],
+      "properties": {
+        "path": { "type": "string" },
+        "line": { "type": "integer" },
+        "rule": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "Signature": {
+      "type": "object",
+      "required": ["key_id", "algorithm", "value", "signed_at"],
+      "properties": {
+        "key_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{24}$"
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["Ed25519", "MlDsa44", "Hybrid"]
+        },
+        "value": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "signed_at": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

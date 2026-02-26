@@ -1,0 +1,67 @@
+[package]
+publish = false
+name = "vr-verifier"
+version = "0.1.0"
+edition = "2021"
+license-file = "../vertrule-runtime/LICENSES/PROPRIETARY.txt"
+description = "Public-facing verifier for VertRule governance receipts -- zero runtime deps"
+
+[[bin]]
+name = "vr-verify"
+path = "src/bin/vr_verify.rs"
+
+[dependencies]
+base64 = "0.22"
+blake3 = "1"
+ed25519-dalek = "2"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+vr-definitions = { path = "../vertrule-definitions" }
+vr-jcs = { path = "../vertrule-runtime/crates/vr-jcs" }
+
+[dev-dependencies]
+proptest = "1"
+anyhow = "1"
+tracing = "0.1"
+vr-kernel-testutils = { path = "../vertrule-runtime/crates/vr-kernel-testutils", features = ["enabled"] }
+
+[lints.rust]
+unsafe_code = "warn"
+unused_extern_crates = "deny"
+unreachable_pub = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+option_if_let_else = "allow"
+match_wild_err_arm = "allow"
+module_name_repetitions = "allow"
+significant_drop_tightening = "allow"
+too_long_first_doc_paragraph = "allow"
+collapsible_if = "allow"
+match_same_arms = "allow"
+redundant_pub_crate = "allow"
+manual_unwrap_or = "allow"
+manual_unwrap_or_default = "allow"
+literal_string_with_formatting_args = "allow"
+too_many_lines = "allow"
+field_reassign_with_default = "warn"
+float_arithmetic = "deny"
+suboptimal_flops = "deny"
+lossy_float_literal = "deny"
+cast_precision_loss = "deny"
+iter_not_returning_iterator = "deny"
+unwrap_used = { level = "deny", priority = 1 }
+expect_used = { level = "deny", priority = 1 }
+dbg_macro = "deny"
+todo = "deny"
+use_self = "warn"
+map_unwrap_or = "warn"
+redundant_closure = "warn"
+nonminimal_bool = "warn"
+cast_lossless = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+must_use_candidate = "warn"

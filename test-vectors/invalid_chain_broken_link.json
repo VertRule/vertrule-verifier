@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "envelope_version": 1,
+      "event_hash": "f594fd086c244db68bbaaaa260a520d010e66fa3b72ae911d254a63a253bef8e",
+      "logical_time": 100,
+      "payload": {
+        "step": 0
+      },
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "receipt_type": "Event",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "envelope_version": 1,
+      "event_hash": "cfe4671d6908665fe25cd1f740a85b798832aa49b7f4e08847ec40b20d5256d1",
+      "logical_time": 200,
+      "parent_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "payload": {
+        "step": 1
+      },
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "receipt_type": "Event",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "description": "Chain where envelope[1].parent_id does not match envelope[0].event_hash.",
+  "expected_error": "ChainLinkageBroken",
+  "expected_result": "fail"
+}

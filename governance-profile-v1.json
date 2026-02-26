@@ -1,0 +1,32 @@
+{
+  "profile_version": "v1",
+  "description": "VertRule governance profile for receipt envelope verification",
+  "unknown_field_policy": "FAIL",
+  "missing_field_policy": "FAIL",
+  "envelope": {
+    "required_fields": [
+      { "name": "envelope_version", "type": "u32", "description": "Schema version (currently 1)" },
+      { "name": "receipt_type", "type": "string", "description": "Discriminator from known set" },
+      { "name": "context_digest", "type": "digest_hex", "description": "BLAKE3 of governance context" },
+      { "name": "schema_digest", "type": "digest_hex", "description": "BLAKE3 of schema used" },
+      { "name": "policy_digest", "type": "digest_hex", "description": "BLAKE3 of active policy" },
+      { "name": "logical_time", "type": "u64", "description": "Monotonically increasing clock" },
+      { "name": "event_hash", "type": "digest_hex", "description": "BLAKE3 of JCS-canonical payload" },
+      { "name": "payload", "type": "object", "description": "Domain-specific receipt data" }
+    ],
+    "optional_fields": [
+      { "name": "parent_id", "type": "digest_hex", "description": "Previous envelope event_hash" },
+      { "name": "boundary_origin", "type": "string", "description": "Provenance tag from known set" }
+    ]
+  },
+  "known_receipt_types": ["Event", "Llm", "Mri", "Governance", "Adapter", "Projection", "Training"],
+  "known_boundary_origins": ["Engine", "Adapter", "Numeric", "Governance", "Model", "Training"],
+  "structural_integer_fields": ["envelope_version", "logical_time"],
+  "digest_format": {
+    "algorithm": "BLAKE3",
+    "encoding": "lowercase_hex",
+    "length_chars": 64,
+    "length_bytes": 32
+  },
+  "canonicalization": "JCS (RFC 8785)"
+}

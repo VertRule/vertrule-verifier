@@ -1,0 +1,19 @@
+{
+  "data": {
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "envelope_version": 1,
+    "event_hash": "81cc7c90cf66ac32c27e5684abfcfc911adc561038370e4d5b8238920be0c546",
+    "logical_time": 1000,
+    "payload": {
+      "action": "create",
+      "domain": "test.governance.v1",
+      "value": 42
+    },
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "receipt_type": "Governance",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "description": "Envelope with single-bit flip in event_hash first nibble. Verifier must reject.",
+  "expected_error": "EventHashMismatch",
+  "expected_result": "fail"
+}

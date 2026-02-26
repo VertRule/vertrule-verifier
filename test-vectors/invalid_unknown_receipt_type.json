@@ -1,0 +1,17 @@
+{
+  "data": {
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "envelope_version": 1,
+    "event_hash": "7847b5eba1f348c972f3c2e1b4df2ef7b0c1fedd1b0ee33ad386e963bad9271c",
+    "logical_time": 1000,
+    "payload": {
+      "action": "test"
+    },
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "receipt_type": "Quantum",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "description": "Envelope with unknown receipt_type 'Quantum'. Verifier must reject.",
+  "expected_error": "UnknownReceiptType",
+  "expected_result": "fail"
+}

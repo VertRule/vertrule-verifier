@@ -1,0 +1,16 @@
+{
+  "data": {
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "envelope_version": 1,
+    "logical_time": 1000,
+    "payload": {
+      "action": "test"
+    },
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "receipt_type": "Governance",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "description": "Envelope missing required field 'event_hash'. Verifier must reject.",
+  "expected_error": "MissingRequiredField",
+  "expected_result": "fail"
+}

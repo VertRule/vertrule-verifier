@@ -1,0 +1,131 @@
+# Determinism Policy v0.1
+# Enforces deterministic computation across all governed code
+
+version = "0.1.0"
+name = "determinism"
+description = "Policy ensuring receipt-compatible deterministic execution"
+
+# Core invariant: Same inputs → same digests across runs, threads, platforms
+
+# Forbidden patterns - zero tolerance
+[forbidden]
+
+# Unordered iteration
+unordered_iteration = [
+    "HashMap::iter",
+    "HashMap::keys",
+    "HashMap::values",
+    "HashMap::into_iter",
+    "HashSet::iter",
+    "HashSet::into_iter",
+]
+
+# Unseeded randomness
+unseeded_rng = [
+    "thread_rng",
+    "OsRng",
+    "random()",
+    "gen_range",
+]
+
+# Wall-clock dependencies
+wall_clock = [
+    "SystemTime::now",
+    "Instant::now",
+    "chrono::Utc::now",
+    "chrono::Local::now",
+]
+
+# Float nondeterminism (bare operations without vr-num wrappers)
+float_ops = [
+    "f32::sin",
+    "f32::cos",
+    "f32::exp",
+    "f32::ln",
+    "f64::sin",
+    "f64::cos",
+    "f64::exp",
+    "f64::ln",
+]
+
+# Parallel iteration without ordering guarantees
+parallel_unordered = [
+    "par_iter().for_each",
+    "par_iter().map",
+]
+
+# Required alternatives
+[required]
+
+# Use ordered collections
+ordered_maps = ["BTreeMap", "IndexMap"]
+ordered_sets = ["BTreeSet", "IndexSet"]
+
+# Use seeded RNG
+seeded_rng = ["ChaChaRng::from_seed", "StdRng::from_seed"]
+
+# Use injected clock
+injected_clock = ["Clock::now", "clock.now()"]
+
+# Use canonical JSON
+canonical_json = ["canonical_json::to_vec", "jcs::serialize"]
+
+# Scope configuration
+[scope]
+
+# Paths where policy is strictly enforced
+strict = [
+    "**/crates/vertrule-core/**",
+    "**/crates/vertrule-schema/**",
+    "**/crates/vertrule-crypto/**",
+    "**/crates/vr-num/**",
+]
+
+# Paths where policy is enforced with allowlist exceptions
+enforced = [
+    "**/crates/vertrule-adapters/**",
+    "**/crates/vertrule-app/**",
+]
+
+# Paths excluded from enforcement (tests, examples, benchmarks)
+excluded = [
+    "**/tests/**",
+    "**/examples/**",
+    "**/benches/**",
+    "**/fixtures/**",
+]
+
+# Lint integration
+[lints]
+
+# Custom dylint lints to run
+dylint = [
+    "no_system_time",
+    "no_hashmap_iteration",
+    "no_random",
+    "no_float_arithmetic",
+    "no_float_in_public_apis",
+]
+
+# Clippy lints to enforce
+clippy = [
+    "clippy::disallowed_methods",
+    "clippy::disallowed_types",
+]
+
+# Gate configuration
+[gate]
+name = "determinism"
+fail_on_violation = true
+require_allowlist_justification = true
+
+# Metadata
+[metadata]
+created_at = "2026-01-16T00:00:00Z"
+created_by = "vertrule-governance"
+
+[[metadata.changelog]]
+version = "0.1.0"
+date = "2026-01-16"
+changes = "Initial policy version"
+author = "vertrule-governance"

@@ -1,0 +1,11 @@
+# Determinism policy scope for vr-verifier
+# Layer 4: Verification — must recompute independently, byte-deterministic
+
+[scope]
+# All source files are strictly governed
+strict = ["src/**/*.rs"]
+
+# No allowlist exceptions — verification must be fully deterministic
+# Note: verifier reconstructs and recomputes canonicalization against
+# vr-jcs directly. Must not reuse vr-receipt envelope helpers.
+[allowlist]
