@@ -1,0 +1,44 @@
+# No Attribution Enforcement
+#
+# Blocks PRs that contain AI attribution lines in the PR body
+# or commit messages. These must be removed before merge.
+#
+name: No Attribution
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-attribution:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR body for attribution
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n' "$PR_BODY" > /tmp/pr-body.txt
+          ./tooling/scripts/check-no-attribution.sh --pr-body /tmp/pr-body.txt
+
+      - name: Check commit messages for attribution
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          ./tooling/scripts/check-no-attribution.sh --commits "origin/${BASE_REF}..HEAD"
