@@ -100,6 +100,15 @@ vr_test!(
 );
 
 vr_test!(
+    fn test_valid_with_algorithm_fields() {
+        let mut json = valid_envelope_json();
+        json["digest_algorithm"] = serde_json::json!("BLAKE3");
+        json["canonicalization"] = serde_json::json!("JCS");
+        validate_envelope_schema(&json)?;
+    }
+);
+
+vr_test!(
     fn test_receipt_type_case_insensitive() {
         let mut json = valid_envelope_json();
         json["receipt_type"] = serde_json::json!("GOVERNANCE");

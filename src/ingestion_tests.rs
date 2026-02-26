@@ -2,6 +2,8 @@
 
 use vr_kernel_testutils::vr_test;
 
+use vr_definitions::SchemaVersion;
+
 use crate::error::VerifyError;
 
 /// Build a valid canonical envelope as raw bytes.
@@ -24,7 +26,7 @@ vr_test!(
     fn test_valid_canonical_envelope_ingests() {
         let bytes = valid_canonical_envelope_bytes()?;
         let (_value, envelope) = super::ingest_envelope(&bytes)?;
-        assert_eq!(envelope.envelope_version, 1);
+        assert_eq!(envelope.envelope_version, SchemaVersion::V1);
     }
 );
 

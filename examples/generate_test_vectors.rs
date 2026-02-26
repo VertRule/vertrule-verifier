@@ -236,6 +236,27 @@ fn gen_valid_signed(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+fn gen_valid_with_algorithms(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let payload = json!({
+        "domain": "test.governance.v1",
+        "action": "create_with_algorithms",
+        "value": 99
+    });
+
+    let mut envelope = build_envelope(&payload, 2000, None, "Governance")?;
+    envelope["digest_algorithm"] = json!("BLAKE3");
+    envelope["canonicalization"] = json!("JCS");
+
+    let vector = json!({
+        "description": "Valid envelope with explicit digest_algorithm and canonicalization fields matching v1 identity triple.",
+        "expected_result": "pass",
+        "data": envelope
+    });
+
+    write_vector(dir, "valid_with_algorithms", &vector)?;
+    write_raw(dir, "valid_with_algorithms", &envelope)
+}
+
 // ---------------------------------------------------------------------------
 // Invalid vectors
 // ---------------------------------------------------------------------------
@@ -493,6 +514,50 @@ fn gen_invalid_bit_flip(dir: &std::path::Path) -> Result<(), Box<dyn std::error:
     write_vector(dir, "invalid_bit_flip", &vector)
 }
 
+fn gen_invalid_wrong_digest_algorithm(
+    dir: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let payload = json!({
+        "domain": "test.governance.v1",
+        "action": "create",
+        "value": 1
+    });
+
+    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    envelope["digest_algorithm"] = json!("SHA256");
+
+    let vector = json!({
+        "description": "Envelope declaring digest_algorithm 'SHA256' which does not match v1 identity triple. Verifier must reject.",
+        "expected_result": "fail",
+        "expected_error": "DigestAlgorithmMismatch",
+        "data": envelope
+    });
+
+    write_vector(dir, "invalid_wrong_digest_algorithm", &vector)
+}
+
+fn gen_invalid_wrong_canonicalization(
+    dir: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let payload = json!({
+        "domain": "test.governance.v1",
+        "action": "create",
+        "value": 1
+    });
+
+    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    envelope["canonicalization"] = json!("CBOR");
+
+    let vector = json!({
+        "description": "Envelope declaring canonicalization 'CBOR' which does not match v1 identity triple. Verifier must reject.",
+        "expected_result": "fail",
+        "expected_error": "CanonicalizationMismatch",
+        "data": envelope
+    });
+
+    write_vector(dir, "invalid_wrong_canonicalization", &vector)
+}
+
 fn gen_invalid_signature(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     let seed: [u8; 32] = [42u8; 32];
     let sk = SigningKey::from_bytes(&seed);
@@ -565,14 +630,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_valid_single_envelope(&dir)?;
     gen_valid_chain_3(&dir)?;
     gen_valid_signed(&dir)?;
+    gen_valid_with_algorithms(&dir)?;
 
-    // Invalid vectors (existing)
+    // Invalid vectors
     gen_invalid_event_hash(&dir)?;
     gen_invalid_chain_broken_link(&dir)?;
     gen_invalid_chain_time_regression(&dir)?;
     gen_invalid_version(&dir)?;
-
-    // Invalid vectors (new)
     gen_invalid_unknown_field(&dir)?;
     gen_invalid_missing_required(&dir)?;
     gen_invalid_unknown_receipt_type(&dir)?;
@@ -581,7 +645,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_invalid_policy_inconsistent(&dir)?;
     gen_invalid_bit_flip(&dir)?;
     gen_invalid_signature(&dir)?;
+    gen_invalid_wrong_digest_algorithm(&dir)?;
+    gen_invalid_wrong_canonicalization(&dir)?;
 
-    eprintln!("Done. 15 vectors generated.");
+    eprintln!("Done. 18 vectors generated.");
     Ok(())
 }

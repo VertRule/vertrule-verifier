@@ -230,6 +230,56 @@ vr_test!(
 );
 
 // ---------------------------------------------------------------------------
+// Algorithm declaration vectors
+// ---------------------------------------------------------------------------
+
+vr_test!(
+    fn valid_with_algorithms_accepted() {
+        let raw = load_raw("valid_with_algorithms")?;
+        let result = vr_verifier::verify_receipt(&raw);
+        need(
+            ok_when(result.status == VerificationStatus::Valid),
+            "envelope with matching algorithm declarations should pass",
+        )?;
+        need(ok_when(result.errors.is_empty()), "no errors expected")?;
+    }
+);
+
+vr_test!(
+    fn invalid_wrong_digest_algorithm_rejected() {
+        let vector = load_vector("invalid_wrong_digest_algorithm")?;
+        let env = parse_single(&vector)?;
+        let result = env.verify_algorithms();
+        need(
+            ok_when(result.is_err()),
+            "wrong digest algorithm should be rejected",
+        )?;
+        let err = need(result.err(), "expected error variant")?;
+        need(
+            ok_when(matches!(err, VerifyError::DigestAlgorithmMismatch { .. })),
+            "error should be DigestAlgorithmMismatch",
+        )?;
+    }
+);
+
+vr_test!(
+    fn invalid_wrong_canonicalization_rejected() {
+        let vector = load_vector("invalid_wrong_canonicalization")?;
+        let env = parse_single(&vector)?;
+        let result = env.verify_algorithms();
+        need(
+            ok_when(result.is_err()),
+            "wrong canonicalization should be rejected",
+        )?;
+        let err = need(result.err(), "expected error variant")?;
+        need(
+            ok_when(matches!(err, VerifyError::CanonicalizationMismatch { .. })),
+            "error should be CanonicalizationMismatch",
+        )?;
+    }
+);
+
+// ---------------------------------------------------------------------------
 // Facade API tests (using raw canonical vectors)
 // ---------------------------------------------------------------------------
 

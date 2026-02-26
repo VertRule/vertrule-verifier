@@ -8,7 +8,7 @@ use vr_kernel_testutils::{need, ok_when, vr_test};
 use crate::chain::verify_chain;
 use crate::envelope::ReceiptEnvelope;
 use crate::error::VerifyError;
-use vr_definitions::DigestBytes;
+use vr_definitions::{DigestBytes, SchemaVersion};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,7 +30,7 @@ fn make_envelope(
     let event_hash = canon_hash(&payload)?;
     let filler = DigestBytes::from_array([0u8; 32]);
     Ok(ReceiptEnvelope {
-        envelope_version: 1,
+        envelope_version: SchemaVersion::V1,
         receipt_type: "governance".to_string(),
         context_digest: filler,
         schema_digest: filler,
@@ -39,6 +39,8 @@ fn make_envelope(
         event_hash,
         parent_id,
         boundary_origin: None,
+        digest_algorithm: None,
+        canonicalization: None,
         payload,
     })
 }
@@ -72,7 +74,7 @@ vr_test!(
 vr_test!(
     fn wrong_version_rejected() {
         let mut env = make_envelope(json!({"x": 1}), 1, None)?;
-        env.envelope_version = 99;
+        env.envelope_version = SchemaVersion::new(99);
 
         need(
             ok_when(matches!(

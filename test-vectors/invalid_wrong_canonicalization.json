@@ -1,0 +1,20 @@
+{
+  "data": {
+    "canonicalization": "CBOR",
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "envelope_version": 1,
+    "event_hash": "a78344467b3c109358e6446915117bbfabea1befad4ac768a570c5c3a8834fea",
+    "logical_time": 1000,
+    "payload": {
+      "action": "create",
+      "domain": "test.governance.v1",
+      "value": 1
+    },
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "receipt_type": "Governance",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "description": "Envelope declaring canonicalization 'CBOR' which does not match v1 identity triple. Verifier must reject.",
+  "expected_error": "CanonicalizationMismatch",
+  "expected_result": "fail"
+}
