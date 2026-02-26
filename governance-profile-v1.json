@@ -3,20 +3,27 @@
   "description": "VertRule governance profile for receipt envelope verification",
   "unknown_field_policy": "FAIL",
   "missing_field_policy": "FAIL",
+  "identity_triple": {
+    "spec_version": 1,
+    "canonicalization": "JCS",
+    "commitment_primitive": "BLAKE3"
+  },
   "envelope": {
     "required_fields": [
       { "name": "envelope_version", "type": "u32", "description": "Schema version (currently 1)" },
       { "name": "receipt_type", "type": "string", "description": "Discriminator from known set" },
-      { "name": "context_digest", "type": "digest_hex", "description": "BLAKE3 of governance context" },
-      { "name": "schema_digest", "type": "digest_hex", "description": "BLAKE3 of schema used" },
-      { "name": "policy_digest", "type": "digest_hex", "description": "BLAKE3 of active policy" },
+      { "name": "context_digest", "type": "digest_hex", "description": "Digest of governance context" },
+      { "name": "schema_digest", "type": "digest_hex", "description": "Digest of schema used" },
+      { "name": "policy_digest", "type": "digest_hex", "description": "Digest of active policy" },
       { "name": "logical_time", "type": "u64", "description": "Monotonically increasing clock" },
-      { "name": "event_hash", "type": "digest_hex", "description": "BLAKE3 of JCS-canonical payload" },
+      { "name": "event_hash", "type": "digest_hex", "description": "Digest of JCS-canonical payload" },
       { "name": "payload", "type": "object", "description": "Domain-specific receipt data" }
     ],
     "optional_fields": [
       { "name": "parent_id", "type": "digest_hex", "description": "Previous envelope event_hash" },
-      { "name": "boundary_origin", "type": "string", "description": "Provenance tag from known set" }
+      { "name": "boundary_origin", "type": "string", "description": "Provenance tag from known set" },
+      { "name": "digest_algorithm", "type": "string", "description": "Declared commitment primitive (v1 default: BLAKE3)" },
+      { "name": "canonicalization", "type": "string", "description": "Declared canonicalization scheme (v1 default: JCS)" }
     ]
   },
   "known_receipt_types": ["Event", "Llm", "Mri", "Governance", "Adapter", "Projection", "Training"],

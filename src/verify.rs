@@ -34,6 +34,10 @@ pub fn verify_receipt(raw_bytes: &[u8]) -> VerificationResult {
         result.add_error(e.to_string());
     }
 
+    if let Err(e) = envelope.verify_algorithms() {
+        result.add_error(e.to_string());
+    }
+
     if let Err(e) = envelope.verify_event_hash() {
         result.digest_validation.all_hashes_match = false;
         result.add_error(e.to_string());
@@ -113,6 +117,10 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
         result.add_error(e.to_string());
     }
 
+    if let Err(e) = envelope.verify_algorithms() {
+        result.add_error(e.to_string());
+    }
+
     if let Err(e) = envelope.verify_event_hash() {
         result.digest_validation.all_hashes_match = false;
         result.add_error(e.to_string());
@@ -160,6 +168,9 @@ fn check_per_envelope(envelopes: &[ReceiptEnvelope], result: &mut VerificationRe
     let mut all_match = true;
     for (i, env) in envelopes.iter().enumerate() {
         if let Err(e) = env.verify_envelope_version() {
+            result.add_error(format!("envelope {i}: {e}"));
+        }
+        if let Err(e) = env.verify_algorithms() {
             result.add_error(format!("envelope {i}: {e}"));
         }
         if let Err(e) = env.verify_event_hash() {

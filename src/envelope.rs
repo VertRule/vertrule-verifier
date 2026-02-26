@@ -6,38 +6,40 @@
 
 use serde::Deserialize;
 
-use vr_definitions::DigestBytes;
+use vr_definitions::constants::{CANONICALIZATION, DIGEST_ALGORITHM};
+use vr_definitions::{DigestBytes, SchemaVersion};
 
 use crate::error::VerifyError;
 
 /// The only currently supported envelope version.
-const SUPPORTED_VERSION: u32 = 1;
+const SUPPORTED_VERSION: u32 = SchemaVersion::V1.get();
 
 /// A self-contained receipt envelope for verification.
 ///
 /// All digest fields are validated [`DigestBytes`] values: exactly 32 bytes
-/// representing a BLAKE3 hash (serialized as 64 lowercase hex characters).
+/// (serialized as 64 lowercase hex characters). The active commitment
+/// primitive is declared by the specification version's identity triple.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ReceiptEnvelope {
     /// Envelope schema version. Currently only `1` is accepted.
-    pub envelope_version: u32,
+    pub envelope_version: SchemaVersion,
 
     /// Free-form receipt type tag (e.g. `"governance"`).
     pub receipt_type: String,
 
-    /// BLAKE3 digest of the governance context.
+    /// Digest of the governance context.
     pub context_digest: DigestBytes,
 
-    /// BLAKE3 digest of the schema used.
+    /// Digest of the schema used.
     pub schema_digest: DigestBytes,
 
-    /// BLAKE3 digest of the policy in effect.
+    /// Digest of the policy in effect.
     pub policy_digest: DigestBytes,
 
     /// Monotonically increasing logical clock value.
     pub logical_time: u64,
 
-    /// BLAKE3 hash of the canonicalized payload.
+    /// Cryptographic hash of the canonicalized payload.
     pub event_hash: DigestBytes,
 
     /// Hash of the previous envelope in the chain, or `None` for the first.
@@ -45,6 +47,16 @@ pub struct ReceiptEnvelope {
 
     /// Optional boundary origin tag.
     pub boundary_origin: Option<String>,
+
+    /// Optional declared digest algorithm. When absent on v1 envelopes,
+    /// `"BLAKE3"` is implied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest_algorithm: Option<String>,
+
+    /// Optional declared canonicalization scheme. When absent on v1 envelopes,
+    /// `"JCS"` is implied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub canonicalization: Option<String>,
 
     /// Arbitrary domain payload whose canonical form produces `event_hash`.
     pub payload: serde_json::Value,
@@ -83,12 +95,42 @@ impl ReceiptEnvelope {
     /// Returns [`VerifyError::UnsupportedVersion`] when the version is not
     /// recognised.
     pub const fn verify_envelope_version(&self) -> Result<(), VerifyError> {
-        if self.envelope_version == SUPPORTED_VERSION {
+        if self.envelope_version.get() == SUPPORTED_VERSION {
             Ok(())
         } else {
             Err(VerifyError::UnsupportedVersion {
-                version: self.envelope_version,
+                version: self.envelope_version.get(),
             })
         }
+    }
+
+    /// Verify that declared algorithms (if present) match the spec version's
+    /// identity triple.
+    ///
+    /// For v1 envelopes, absent fields imply `"BLAKE3"` and `"JCS"`.
+    /// If present, they must match exactly.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VerifyError::DigestAlgorithmMismatch`] or
+    /// [`VerifyError::CanonicalizationMismatch`] on mismatch.
+    pub fn verify_algorithms(&self) -> Result<(), VerifyError> {
+        if let Some(ref declared) = self.digest_algorithm {
+            if declared != DIGEST_ALGORITHM {
+                return Err(VerifyError::DigestAlgorithmMismatch {
+                    declared: declared.clone(),
+                    expected: DIGEST_ALGORITHM.to_string(),
+                });
+            }
+        }
+        if let Some(ref declared) = self.canonicalization {
+            if declared != CANONICALIZATION {
+                return Err(VerifyError::CanonicalizationMismatch {
+                    declared: declared.clone(),
+                    expected: CANONICALIZATION.to_string(),
+                });
+            }
+        }
+        Ok(())
     }
 }

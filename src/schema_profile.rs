@@ -22,7 +22,12 @@ const REQUIRED_ENVELOPE_FIELDS: &[&str] = &[
 ];
 
 /// Optional fields in a v1 receipt envelope.
-const OPTIONAL_ENVELOPE_FIELDS: &[&str] = &["parent_id", "boundary_origin"];
+const OPTIONAL_ENVELOPE_FIELDS: &[&str] = &[
+    "parent_id",
+    "boundary_origin",
+    "digest_algorithm",
+    "canonicalization",
+];
 
 /// Known `receipt_type` values (case-insensitive match).
 const KNOWN_RECEIPT_TYPES: &[&str] = &[

@@ -1,9 +1,8 @@
 # Per-crate governance manifest for vr-verifier
-# Constitutional Layer 4: Independent receipt verification
+# Independent receipt verification
 
 [crate]
 name = "vr-verifier"
-layer = 4
 version = "0.1.0"
 publish = false
 extraction_ready = false
@@ -19,17 +18,3 @@ determinism = "canonical"
 [policy_bindings]
 determinism = { version = "0.1", digest = "72f890a1caa73c5e87c3a558d0c50bfe43b8a47052bb423697c86c4c27a54487" }
 repo-boundary = { version = "0.1", digest = "311a7ecdc39526ac13d1a1a900a6edf809e5c3c2879baa3028070d636303c565" }
-
-[deny_list]
-crates = [
-    "vertrule-core",
-    "vertrule-schema",
-    "vertrule-adapters",
-    "vertrule-app",
-    "vertrule-cli",
-    "vr-numeric-boundary",
-    "vr-float",
-    "vr-int",
-    "vr-sealed-domain",
-    "vr-sdk-packs",
-]

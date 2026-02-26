@@ -52,8 +52,8 @@ pub use envelope::ReceiptEnvelope;
 pub use error::VerifyError;
 pub use verify::{verify_receipt, verify_receipt_chain, verify_signed_receipt};
 
-// Re-export DigestBytes from vr-definitions for public API compatibility.
-pub use vr_definitions::DigestBytes;
+// Re-export types from vr-definitions for public API compatibility.
+pub use vr_definitions::{DigestBytes, SchemaVersion};
 
 #[cfg(test)]
 #[path = "lib_tests.rs"]

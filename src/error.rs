@@ -131,6 +131,24 @@ pub enum VerifyError {
         reason: String,
     },
 
+    /// Declared `digest_algorithm` does not match the spec version binding.
+    #[error("digest algorithm mismatch: declared \"{declared}\", expected \"{expected}\"")]
+    DigestAlgorithmMismatch {
+        /// The algorithm declared in the envelope.
+        declared: String,
+        /// The algorithm required by the spec version.
+        expected: String,
+    },
+
+    /// Declared `canonicalization` does not match the spec version binding.
+    #[error("canonicalization mismatch: declared \"{declared}\", expected \"{expected}\"")]
+    CanonicalizationMismatch {
+        /// The canonicalization declared in the envelope.
+        declared: String,
+        /// The canonicalization required by the spec version.
+        expected: String,
+    },
+
     /// Ed25519 signature verification failed.
     #[error("signature verification failed: {reason}")]
     SignatureInvalid {
