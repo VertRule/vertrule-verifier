@@ -92,3 +92,30 @@ vr_test!(
         }
     }
 );
+
+vr_test!(
+    fn test_non_canonical_chain_rejected() {
+        // Build a valid envelope value
+        let envelope = serde_json::json!({
+            "context_digest": "a".repeat(64),
+            "envelope_version": 1,
+            "event_hash": "d".repeat(64),
+            "logical_time": 1000,
+            "payload": {"key": "value"},
+            "policy_digest": "c".repeat(64),
+            "receipt_type": "governance",
+            "schema_digest": "b".repeat(64)
+        });
+        let array = serde_json::Value::Array(vec![envelope]);
+        // Pretty-print to make it non-canonical
+        let pretty = serde_json::to_vec_pretty(&array)
+            .map_err(|e| anyhow::anyhow!("serialize failed: {e}"))?;
+        let Err(err) = super::ingest_chain(&pretty) else {
+            anyhow::bail!("expected error, got Ok")
+        };
+        match err {
+            VerifyError::NonCanonical { .. } => {}
+            other => anyhow::bail!("expected NonCanonical, got: {other}"),
+        }
+    }
+);

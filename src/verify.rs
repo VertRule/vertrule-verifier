@@ -7,8 +7,7 @@
 //! invalid input produces an [`Invalid`](crate::result::VerificationStatus::Invalid)
 //! result — never a panic.
 
-use std::collections::BTreeSet;
-
+use crate::chain::check_chain_detail;
 use crate::envelope::ReceiptEnvelope;
 use crate::ingestion::{ingest_chain, ingest_envelope};
 use crate::result::{
@@ -64,14 +63,14 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
 
     let mut result = VerificationResult::valid_single();
 
-    // Per-envelope checks
+    // Per-envelope checks (version, algorithms, event_hash)
     let all_hashes_match = check_per_envelope(&envelopes, &mut result);
 
-    // Chain-level checks (each computed independently)
-    let chain_integrity = check_linkage_and_duplicates(&envelopes, &mut result);
-    let ordering_valid = check_ordering(&envelopes, &mut result);
-    let uniform_context = check_context_consistency(&envelopes, &mut result);
-    let (stable_policy, transitions_detected) = check_policy_consistency(&envelopes, &mut result);
+    // Chain invariants (single source of truth in chain module)
+    let detail = check_chain_detail(&envelopes);
+    for e in &detail.errors {
+        result.add_error(e.to_string());
+    }
 
     // Assemble result fields
     let first = &envelopes[0];
@@ -79,8 +78,8 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
 
     result.digest_validation = DigestValidation {
         all_hashes_match,
-        chain_integrity,
-        ordering_valid,
+        chain_integrity: detail.linkage_ok,
+        ordering_valid: detail.ordering_ok,
     };
 
     result.chain_validation = Some(ChainValidation {
@@ -89,11 +88,13 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
         last_logical_time: last.logical_time,
     });
 
-    result.context_consistency = Some(ContextConsistency { uniform_context });
+    result.context_consistency = Some(ContextConsistency {
+        uniform_context: detail.context_uniform,
+    });
 
     result.policy_consistency = Some(PolicyConsistency {
-        stable_policy,
-        transitions_detected,
+        stable_policy: detail.policy_stable,
+        transitions_detected: !detail.policy_stable,
     });
 
     result
@@ -179,95 +180,6 @@ fn check_per_envelope(envelopes: &[ReceiptEnvelope], result: &mut VerificationRe
         }
     }
     all_match
-}
-
-/// Check parent linkage and duplicate `event_hash`. Returns `chain_integrity`.
-fn check_linkage_and_duplicates(
-    envelopes: &[ReceiptEnvelope],
-    result: &mut VerificationResult,
-) -> bool {
-    let mut ok = envelopes[0].parent_id.is_none();
-    if !ok {
-        result.add_error("first envelope must not have parent_id".to_string());
-    }
-
-    let mut seen = BTreeSet::new();
-    seen.insert(envelopes[0].event_hash.to_hex());
-
-    for i in 1..envelopes.len() {
-        if !seen.insert(envelopes[i].event_hash.to_hex()) {
-            result.add_error(format!(
-                "duplicate event_hash at index {i}: {}",
-                envelopes[i].event_hash
-            ));
-            ok = false;
-        }
-        let expected = Some(envelopes[i - 1].event_hash);
-        if envelopes[i].parent_id != expected {
-            result.add_error(format!(
-                "chain linkage broken at index {i}: expected {expected:?}, actual {:?}",
-                envelopes[i].parent_id
-            ));
-            ok = false;
-        }
-    }
-
-    ok
-}
-
-/// Check logical time monotonicity. Returns `ordering_valid`.
-fn check_ordering(envelopes: &[ReceiptEnvelope], result: &mut VerificationResult) -> bool {
-    let mut ok = true;
-    for (i, pair) in envelopes.windows(2).enumerate() {
-        if pair[1].logical_time <= pair[0].logical_time {
-            result.add_error(format!(
-                "logical time not monotonic at index {}: {} <= {}",
-                i + 1,
-                pair[1].logical_time,
-                pair[0].logical_time
-            ));
-            ok = false;
-        }
-    }
-    ok
-}
-
-/// Check `context_digest` consistency. Returns `uniform_context`.
-fn check_context_consistency(
-    envelopes: &[ReceiptEnvelope],
-    result: &mut VerificationResult,
-) -> bool {
-    let expected = &envelopes[0].context_digest;
-    let mut uniform = true;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.context_digest != *expected {
-            result.add_error(format!(
-                "context_digest inconsistency at index {i}: expected {expected}, found {}",
-                env.context_digest
-            ));
-            uniform = false;
-        }
-    }
-    uniform
-}
-
-/// Check `policy_digest` consistency. Returns `(stable_policy, transitions_detected)`.
-fn check_policy_consistency(
-    envelopes: &[ReceiptEnvelope],
-    result: &mut VerificationResult,
-) -> (bool, bool) {
-    let expected = &envelopes[0].policy_digest;
-    let mut stable = true;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.policy_digest != *expected {
-            result.add_error(format!(
-                "policy_digest inconsistency at index {i}: expected {expected}, found {}",
-                env.policy_digest
-            ));
-            stable = false;
-        }
-    }
-    (stable, !stable)
 }
 
 #[cfg(test)]

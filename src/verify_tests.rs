@@ -64,7 +64,7 @@ fn build_valid_chain_bytes(count: usize) -> Result<Vec<u8>, anyhow::Error> {
     }
 
     let array = serde_json::Value::Array(elements);
-    serde_json::to_vec(&array).map_err(|e| anyhow::anyhow!("serialization: {e}"))
+    vr_jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 vr_test!(
@@ -157,7 +157,7 @@ vr_test!(
 
         let array = serde_json::Value::Array(vec![env0, env1]);
         let bytes =
-            serde_json::to_vec(&array).map_err(|e| anyhow::anyhow!("serialization: {e}"))?;
+            vr_jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -174,7 +174,7 @@ vr_test!(
 
         let array = serde_json::Value::Array(vec![env0, env1]);
         let bytes =
-            serde_json::to_vec(&array).map_err(|e| anyhow::anyhow!("serialization: {e}"))?;
+            vr_jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);

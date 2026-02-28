@@ -173,3 +173,76 @@ vr_test!(
         }
     }
 );
+
+vr_test!(
+    fn test_governance_profile_matches_constants() {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let path = format!("{manifest_dir}/governance-profile-v1.json");
+        let profile_bytes =
+            std::fs::read(&path).map_err(|e| anyhow::anyhow!("reading {path}: {e}"))?;
+        let profile: serde_json::Value = serde_json::from_slice(&profile_bytes)
+            .map_err(|e| anyhow::anyhow!("parsing profile: {e}"))?;
+
+        // Required fields
+        let profile_required: Vec<&str> = profile["envelope"]["required_fields"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("required_fields must be array"))?
+            .iter()
+            .filter_map(|f| f["name"].as_str())
+            .collect();
+        if profile_required.as_slice() != super::REQUIRED_ENVELOPE_FIELDS {
+            anyhow::bail!(
+                "required fields mismatch:\n  profile: {profile_required:?}\n  code: {:?}",
+                super::REQUIRED_ENVELOPE_FIELDS
+            );
+        }
+
+        // Optional fields
+        let profile_optional: Vec<&str> = profile["envelope"]["optional_fields"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("optional_fields must be array"))?
+            .iter()
+            .filter_map(|f| f["name"].as_str())
+            .collect();
+        if profile_optional.as_slice() != super::OPTIONAL_ENVELOPE_FIELDS {
+            anyhow::bail!(
+                "optional fields mismatch:\n  profile: {profile_optional:?}\n  code: {:?}",
+                super::OPTIONAL_ENVELOPE_FIELDS
+            );
+        }
+
+        // Receipt types (case-insensitive)
+        let profile_types: Vec<String> = profile["known_receipt_types"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("known_receipt_types must be array"))?
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_lowercase))
+            .collect();
+        let code_types: Vec<String> = super::KNOWN_RECEIPT_TYPES
+            .iter()
+            .map(|&s| s.to_lowercase())
+            .collect();
+        if profile_types != code_types {
+            anyhow::bail!(
+                "receipt types mismatch:\n  profile: {profile_types:?}\n  code: {code_types:?}"
+            );
+        }
+
+        // Boundary origins (case-insensitive)
+        let profile_origins: Vec<String> = profile["known_boundary_origins"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("known_boundary_origins must be array"))?
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_lowercase))
+            .collect();
+        let code_origins: Vec<String> = super::KNOWN_BOUNDARY_ORIGINS
+            .iter()
+            .map(|&s| s.to_lowercase())
+            .collect();
+        if profile_origins != code_origins {
+            anyhow::bail!(
+                "boundary origins mismatch:\n  profile: {profile_origins:?}\n  code: {code_origins:?}"
+            );
+        }
+    }
+);

@@ -14,6 +14,131 @@ use std::collections::BTreeSet;
 use crate::envelope::ReceiptEnvelope;
 use crate::error::VerifyError;
 
+/// Per-category chain check results for internal reporting.
+///
+/// Used by [`check_chain_detail`] to collect all violations across categories
+/// rather than failing on the first.
+#[allow(clippy::struct_excessive_bools)]
+pub(crate) struct ChainDetail {
+    /// Parent linkage and duplicate detection passed.
+    pub linkage_ok: bool,
+    /// Logical time monotonicity passed.
+    pub ordering_ok: bool,
+    /// All `context_digest` values match the first.
+    pub context_uniform: bool,
+    /// All `policy_digest` values match the first.
+    pub policy_stable: bool,
+    /// All errors found across all checks.
+    pub errors: Vec<VerifyError>,
+}
+
+/// Check all chain invariants, collecting every violation.
+///
+/// Returns a [`ChainDetail`] with per-category booleans and all errors.
+/// This is the single source of truth for chain invariant logic.
+pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
+    let mut errors = Vec::new();
+    let mut linkage_ok = true;
+    let mut ordering_ok = true;
+    let mut context_uniform = true;
+    let mut policy_stable = true;
+
+    if envelopes.is_empty() {
+        return ChainDetail {
+            linkage_ok,
+            ordering_ok,
+            context_uniform,
+            policy_stable,
+            errors,
+        };
+    }
+
+    let first = &envelopes[0];
+
+    // First envelope must have no parent.
+    if first.parent_id.is_some() {
+        errors.push(VerifyError::ChainLinkageBroken {
+            index: 0,
+            expected: None,
+            actual: first.parent_id,
+        });
+        linkage_ok = false;
+    }
+
+    // Context consistency: all must match first envelope.
+    let expected_context = &first.context_digest;
+    for (i, env) in envelopes.iter().enumerate().skip(1) {
+        if env.context_digest != *expected_context {
+            errors.push(VerifyError::ContextInconsistent {
+                index: i,
+                expected: *expected_context,
+                found: env.context_digest,
+            });
+            context_uniform = false;
+        }
+    }
+
+    // Policy consistency: all must match first envelope.
+    let expected_policy = &first.policy_digest;
+    for (i, env) in envelopes.iter().enumerate().skip(1) {
+        if env.policy_digest != *expected_policy {
+            errors.push(VerifyError::PolicyInconsistent {
+                index: i,
+                expected: *expected_policy,
+                found: env.policy_digest,
+            });
+            policy_stable = false;
+        }
+    }
+
+    // Per-pair checks + duplicate detection.
+    let mut seen_hashes = BTreeSet::new();
+    seen_hashes.insert(first.event_hash);
+
+    for i in 1..envelopes.len() {
+        let prev = &envelopes[i - 1];
+        let curr = &envelopes[i];
+
+        // Duplicate event_hash detection.
+        if !seen_hashes.insert(curr.event_hash) {
+            errors.push(VerifyError::DuplicateEventHash {
+                index: i,
+                digest: curr.event_hash,
+            });
+            linkage_ok = false;
+        }
+
+        // Parent linkage: current parent_id must equal previous event_hash.
+        let expected_parent = Some(prev.event_hash);
+        if curr.parent_id != expected_parent {
+            errors.push(VerifyError::ChainLinkageBroken {
+                index: i,
+                expected: expected_parent,
+                actual: curr.parent_id,
+            });
+            linkage_ok = false;
+        }
+
+        // Logical time must be strictly increasing.
+        if curr.logical_time <= prev.logical_time {
+            errors.push(VerifyError::LogicalTimeNotMonotonic {
+                index: i,
+                previous: prev.logical_time,
+                current: curr.logical_time,
+            });
+            ordering_ok = false;
+        }
+    }
+
+    ChainDetail {
+        linkage_ok,
+        ordering_ok,
+        context_uniform,
+        policy_stable,
+        errors,
+    }
+}
+
 /// Verify all chain invariants across a sequence of envelopes.
 ///
 /// An empty slice is considered a valid (vacuously true) chain.
@@ -28,79 +153,9 @@ use crate::error::VerifyError;
 ///
 /// Returns the first violation found.
 pub fn verify_chain(envelopes: &[ReceiptEnvelope]) -> Result<(), VerifyError> {
-    if envelopes.is_empty() {
-        return Ok(());
+    let detail = check_chain_detail(envelopes);
+    match detail.errors.into_iter().next() {
+        Some(e) => Err(e),
+        None => Ok(()),
     }
-
-    // First envelope must have no parent.
-    let first = &envelopes[0];
-    if first.parent_id.is_some() {
-        return Err(VerifyError::ChainLinkageBroken {
-            index: 0,
-            expected: None,
-            actual: first.parent_id,
-        });
-    }
-
-    // Context consistency: all must match first envelope.
-    let expected_context = &first.context_digest;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.context_digest != *expected_context {
-            return Err(VerifyError::ContextInconsistent {
-                index: i,
-                expected: *expected_context,
-                found: env.context_digest,
-            });
-        }
-    }
-
-    // Policy consistency: all must match first envelope.
-    let expected_policy = &first.policy_digest;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.policy_digest != *expected_policy {
-            return Err(VerifyError::PolicyInconsistent {
-                index: i,
-                expected: *expected_policy,
-                found: env.policy_digest,
-            });
-        }
-    }
-
-    // Per-pair checks + duplicate detection.
-    let mut seen_hashes = BTreeSet::new();
-    seen_hashes.insert(first.event_hash);
-
-    for i in 1..envelopes.len() {
-        let prev = &envelopes[i - 1];
-        let curr = &envelopes[i];
-
-        // Duplicate event_hash detection.
-        if !seen_hashes.insert(curr.event_hash) {
-            return Err(VerifyError::DuplicateEventHash {
-                index: i,
-                digest: curr.event_hash,
-            });
-        }
-
-        // Parent linkage: current parent_id must equal previous event_hash.
-        let expected_parent = Some(prev.event_hash);
-        if curr.parent_id != expected_parent {
-            return Err(VerifyError::ChainLinkageBroken {
-                index: i,
-                expected: expected_parent,
-                actual: curr.parent_id,
-            });
-        }
-
-        // Logical time must be strictly increasing.
-        if curr.logical_time <= prev.logical_time {
-            return Err(VerifyError::LogicalTimeNotMonotonic {
-                index: i,
-                previous: prev.logical_time,
-                current: curr.logical_time,
-            });
-        }
-    }
-
-    Ok(())
 }

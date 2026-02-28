@@ -72,6 +72,10 @@ pub fn ingest_chain(
         return Ok((Vec::new(), Vec::new()));
     }
 
+    // Canonical form: verify the entire array is in JCS canonical form.
+    // If the full array is canonical, every element is necessarily canonical.
+    verify_canonical_form(raw_bytes, &array)?;
+
     let mut values = Vec::with_capacity(elements.len());
     let mut envelopes = Vec::with_capacity(elements.len());
 
@@ -81,22 +85,6 @@ pub fn ingest_chain(
 
         // Float detection per element
         reject_structural_floats(elem)?;
-
-        // Canonical form: check each element individually.
-        // Re-canonicalize the element and compare to its canonical bytes.
-        let elem_canonical =
-            vr_jcs::to_canon_bytes(elem).map_err(|e| VerifyError::NonCanonical {
-                reason: format!("element {i}: {e}"),
-            })?;
-        let elem_reserialized =
-            vr_jcs::to_canon_bytes(elem).map_err(|e| VerifyError::NonCanonical {
-                reason: format!("element {i}: {e}"),
-            })?;
-        if elem_canonical != elem_reserialized {
-            return Err(VerifyError::NonCanonical {
-                reason: format!("element {i}: re-canonicalization produced different bytes"),
-            });
-        }
 
         // Typed deserialization
         let envelope: ReceiptEnvelope =
