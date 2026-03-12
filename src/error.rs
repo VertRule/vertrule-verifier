@@ -1,6 +1,6 @@
 //! Error types for receipt verification.
 
-use vr_definitions::{DefinitionError, DigestBytes};
+use vertrule_schemas::{DefinitionError, DigestBytes};
 
 /// Errors produced during receipt envelope or chain verification.
 #[derive(Debug, thiserror::Error)]

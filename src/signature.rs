@@ -13,7 +13,7 @@ use base64::Engine;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::Deserialize;
 
-use vr_definitions::DigestBytes;
+use vertrule_schemas::DigestBytes;
 
 use crate::error::VerifyError;
 

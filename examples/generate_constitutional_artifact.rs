@@ -21,38 +21,45 @@ use std::process::Command;
 
 struct CrateSpec {
     name: &'static str,
+    source_rel: &'static str,
     layer: u32,
     logical_time: u64,
 }
 
 const CONSTITUTIONAL_CRATES: &[CrateSpec] = &[
     CrateSpec {
-        name: "vr-definitions",
+        name: "vertrule-schemas",
+        source_rel: "vertrule-definitions",
         layer: 0,
         logical_time: 0,
     },
     CrateSpec {
         name: "vr-jcs",
+        source_rel: "vertrule-runtime/crates/vr-jcs",
         layer: 1,
         logical_time: 1000,
     },
     CrateSpec {
         name: "vr-time",
+        source_rel: "vertrule-runtime/crates/vr-time",
         layer: 1,
         logical_time: 1001,
     },
     CrateSpec {
         name: "vr-receipt",
+        source_rel: "vertrule-runtime/crates/vr-receipt",
         layer: 2,
         logical_time: 2000,
     },
     CrateSpec {
         name: "vr-rbh",
+        source_rel: "vertrule-runtime/crates/vr-rbh",
         layer: 3,
         logical_time: 3000,
     },
     CrateSpec {
         name: "vr-verifier",
+        source_rel: "vertrule-verifier",
         layer: 4,
         logical_time: 4000,
     },
@@ -323,16 +330,13 @@ fn verify_artifacts(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 // ---------------------------------------------------------------------------
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..");
-    let workspace_root = workspace_root.canonicalize()?;
-    let crates_dir = workspace_root.join("crates");
-    let out_dir = workspace_root.join("artifacts").join("constitutional");
+    let repositories_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let repositories_root = repositories_root.canonicalize()?;
+    let out_dir = repositories_root.join("artifacts").join("constitutional");
     std::fs::create_dir_all(&out_dir)?;
 
     eprintln!("=== Constitutional Artifact Generation ===");
-    eprintln!("  workspace: {}", workspace_root.display());
+    eprintln!("  repositories: {}", repositories_root.display());
     eprintln!("  output:    {}", out_dir.display());
 
     // Capture toolchain (deterministic per machine)
@@ -344,8 +348,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // authority_set_digest: BLAKE3 of the governance authority set (placeholder for Stage 0)
     let authority_set_hex = hex::encode(blake3::hash(b"constitutional-ceremony-v0").as_bytes());
     // policy_digest: BLAKE3 of the determinism policy file
-    let policy_path = crates_dir
-        .join("vr-definitions")
+    let policy_path = repositories_root
+        .join("vertrule-definitions")
         .join("governance")
         .join("policies")
         .join("determinism@0.1")
@@ -362,7 +366,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut parent_hash: Option<String> = None;
 
     for spec in CONSTITUTIONAL_CRATES {
-        let spec_dir = crates_dir.join(spec.name);
+        let spec_dir = repositories_root.join(spec.source_rel);
         let manifest_path = spec_dir.join("governance").join("manifest.toml");
         let known_nd_path = spec_dir
             .join("governance")

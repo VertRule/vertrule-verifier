@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 
-use vr_definitions::DigestBytes;
+use vertrule_schemas::DigestBytes;
 
 use crate::error::VerifyError;
 use crate::schema_profile::PROFILE_VERSION;

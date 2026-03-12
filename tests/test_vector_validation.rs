@@ -7,6 +7,7 @@
 
 use vr_kernel_testutils::{need, ok_when, vr_test};
 
+use vr_verifier::envelope::{verify_algorithms, verify_envelope_version, verify_event_hash};
 use vr_verifier::chain::verify_chain;
 use vr_verifier::envelope::ReceiptEnvelope;
 use vr_verifier::error::VerifyError;
@@ -60,8 +61,8 @@ vr_test!(
         )?;
 
         let env = parse_single(&vector)?;
-        env.verify_event_hash()?;
-        env.verify_envelope_version()?;
+        verify_event_hash(&env)?;
+        verify_envelope_version(&env)?;
     }
 );
 
@@ -76,8 +77,8 @@ vr_test!(
         let chain = parse_chain(&vector)?;
 
         for env in &chain {
-            env.verify_event_hash()?;
-            env.verify_envelope_version()?;
+            verify_event_hash(env)?;
+            verify_envelope_version(env)?;
         }
 
         verify_chain(&chain)?;
@@ -92,7 +93,7 @@ vr_test!(
     fn invalid_event_hash_is_rejected() {
         let vector = load_vector("invalid_event_hash")?;
         let env = parse_single(&vector)?;
-        let result = env.verify_event_hash();
+        let result = verify_event_hash(&env);
         need(ok_when(result.is_err()), "tampered hash should be rejected")?;
         let err = need(result.err(), "expected error variant")?;
         need(
@@ -147,8 +148,8 @@ vr_test!(
     fn invalid_version_is_rejected() {
         let vector = load_vector("invalid_version")?;
         let env = parse_single(&vector)?;
-        env.verify_event_hash()?;
-        let result = env.verify_envelope_version();
+        verify_event_hash(&env)?;
+        let result = verify_envelope_version(&env);
         need(ok_when(result.is_err()), "version 99 should be rejected")?;
         let err = need(result.err(), "expected error variant")?;
         need(
@@ -216,7 +217,7 @@ vr_test!(
     fn invalid_bit_flip_is_rejected() {
         let vector = load_vector("invalid_bit_flip")?;
         let env = parse_single(&vector)?;
-        let result = env.verify_event_hash();
+        let result = verify_event_hash(&env);
         need(
             ok_when(result.is_err()),
             "bit-flipped event_hash should be rejected",
@@ -249,7 +250,7 @@ vr_test!(
     fn invalid_wrong_digest_algorithm_rejected() {
         let vector = load_vector("invalid_wrong_digest_algorithm")?;
         let env = parse_single(&vector)?;
-        let result = env.verify_algorithms();
+        let result = verify_algorithms(&env);
         need(
             ok_when(result.is_err()),
             "wrong digest algorithm should be rejected",
@@ -266,7 +267,7 @@ vr_test!(
     fn invalid_wrong_canonicalization_rejected() {
         let vector = load_vector("invalid_wrong_canonicalization")?;
         let env = parse_single(&vector)?;
-        let result = env.verify_algorithms();
+        let result = verify_algorithms(&env);
         need(
             ok_when(result.is_err()),
             "wrong canonicalization should be rejected",
@@ -374,7 +375,7 @@ vr_test!(
                 chain[1]
                     .parent_id
                     .as_ref()
-                    .map(vr_definitions::DigestBytes::to_hex)
+                    .map(vertrule_schemas::DigestBytes::to_hex)
                     == Some(chain[0].event_hash.to_hex()),
             ),
             "chain[1].parent_id must equal chain[0].event_hash",
@@ -384,7 +385,7 @@ vr_test!(
                 chain[2]
                     .parent_id
                     .as_ref()
-                    .map(vr_definitions::DigestBytes::to_hex)
+                    .map(vertrule_schemas::DigestBytes::to_hex)
                     == Some(chain[1].event_hash.to_hex()),
             ),
             "chain[2].parent_id must equal chain[1].event_hash",

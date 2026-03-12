@@ -11,7 +11,7 @@
 //!
 //! | Crate | Purpose |
 //! |-------|---------|
-//! | `vr-definitions` | Canonical types (`DigestBytes`, etc.) |
+//! | `vertrule-schemas` | Canonical types (`DigestBytes`, etc.) |
 //! | `vr-jcs` | RFC 8785 JSON Canonicalization |
 //! | `blake3` | Cryptographic hashing |
 //! | `serde` / `serde_json` | Deserialization |
@@ -52,8 +52,8 @@ pub use envelope::ReceiptEnvelope;
 pub use error::VerifyError;
 pub use verify::{verify_receipt, verify_receipt_chain, verify_signed_receipt};
 
-// Re-export types from vr-definitions for public API compatibility.
-pub use vr_definitions::{DigestBytes, SchemaVersion};
+// Re-export types from vertrule-schemas for public API compatibility.
+pub use vertrule_schemas::{DigestBytes, SchemaVersion};
 
 #[cfg(test)]
 #[path = "lib_tests.rs"]

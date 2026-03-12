@@ -21,24 +21,22 @@ vr_test!(
         let cargo_toml = std::fs::read_to_string(manifest.join("Cargo.toml"))
             .map_err(|e| anyhow::anyhow!("failed to read Cargo.toml: {e}"))?;
 
-        // Extract only the [dependencies] section (not [dev-dependencies])
-        // to avoid false positives from path strings.
-        let deps_section = extract_dependencies_section(&cargo_toml);
+        let dependency_names = extract_dependency_names(&cargo_toml);
 
         for dep in FORBIDDEN_DEPS {
             anyhow::ensure!(
-                !deps_section.contains(dep),
+                !dependency_names.iter().any(|name| name == dep),
                 "Cargo.toml [dependencies] must not contain dependency on '{dep}'"
             );
         }
     }
 );
 
-/// Extract the `[dependencies]` section from a Cargo.toml string.
-/// Returns only the lines between `[dependencies]` and the next `[` section header.
-fn extract_dependencies_section(cargo_toml: &str) -> String {
+/// Extract the dependency keys from the `[dependencies]` section of a Cargo.toml file.
+fn extract_dependency_names(cargo_toml: &str) -> Vec<String> {
     let mut in_deps = false;
-    let mut section = String::new();
+    let mut names = Vec::new();
+
     for line in cargo_toml.lines() {
         let trimmed = line.trim();
         if trimmed == "[dependencies]" {
@@ -48,10 +46,14 @@ fn extract_dependencies_section(cargo_toml: &str) -> String {
         if in_deps && trimmed.starts_with('[') {
             break;
         }
-        if in_deps {
-            section.push_str(line);
-            section.push('\n');
+        if !in_deps || trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        if let Some((name, _)) = trimmed.split_once('=') {
+            names.push(name.trim().to_string());
         }
     }
-    section
+
+    names
 }

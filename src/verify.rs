@@ -8,7 +8,9 @@
 //! result — never a panic.
 
 use crate::chain::check_chain_detail;
-use crate::envelope::ReceiptEnvelope;
+use crate::envelope::{
+    verify_algorithms, verify_envelope_version, verify_event_hash, ReceiptEnvelope,
+};
 use crate::ingestion::{ingest_chain, ingest_envelope};
 use crate::result::{
     ChainValidation, ContextConsistency, DigestValidation, PolicyConsistency, SignatureValidation,
@@ -29,15 +31,15 @@ pub fn verify_receipt(raw_bytes: &[u8]) -> VerificationResult {
 
     let mut result = VerificationResult::valid_single();
 
-    if let Err(e) = envelope.verify_envelope_version() {
+    if let Err(e) = verify_envelope_version(&envelope) {
         result.add_error(e.to_string());
     }
 
-    if let Err(e) = envelope.verify_algorithms() {
+    if let Err(e) = verify_algorithms(&envelope) {
         result.add_error(e.to_string());
     }
 
-    if let Err(e) = envelope.verify_event_hash() {
+    if let Err(e) = verify_event_hash(&envelope) {
         result.digest_validation.all_hashes_match = false;
         result.add_error(e.to_string());
     }
@@ -114,15 +116,15 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
 
     let mut result = VerificationResult::valid_single();
 
-    if let Err(e) = envelope.verify_envelope_version() {
+    if let Err(e) = verify_envelope_version(&envelope) {
         result.add_error(e.to_string());
     }
 
-    if let Err(e) = envelope.verify_algorithms() {
+    if let Err(e) = verify_algorithms(&envelope) {
         result.add_error(e.to_string());
     }
 
-    if let Err(e) = envelope.verify_event_hash() {
+    if let Err(e) = verify_event_hash(&envelope) {
         result.digest_validation.all_hashes_match = false;
         result.add_error(e.to_string());
     }
@@ -168,13 +170,13 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
 fn check_per_envelope(envelopes: &[ReceiptEnvelope], result: &mut VerificationResult) -> bool {
     let mut all_match = true;
     for (i, env) in envelopes.iter().enumerate() {
-        if let Err(e) = env.verify_envelope_version() {
+        if let Err(e) = verify_envelope_version(env) {
             result.add_error(format!("envelope {i}: {e}"));
         }
-        if let Err(e) = env.verify_algorithms() {
+        if let Err(e) = verify_algorithms(env) {
             result.add_error(format!("envelope {i}: {e}"));
         }
-        if let Err(e) = env.verify_event_hash() {
+        if let Err(e) = verify_event_hash(env) {
             result.add_error(format!("envelope {i}: {e}"));
             all_match = false;
         }

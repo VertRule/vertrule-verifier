@@ -6,9 +6,9 @@ use serde_json::json;
 use vr_kernel_testutils::{need, ok_when, vr_test};
 
 use crate::chain::verify_chain;
-use crate::envelope::ReceiptEnvelope;
+use crate::envelope::{verify_envelope_version, verify_event_hash, ReceiptEnvelope};
 use crate::error::VerifyError;
-use vr_definitions::{DigestBytes, SchemaVersion};
+use vertrule_schemas::{DigestBytes, ReceiptType, SchemaVersion};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -31,7 +31,7 @@ fn make_envelope(
     let filler = DigestBytes::from_array([0u8; 32]);
     Ok(ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
-        receipt_type: "governance".to_string(),
+        receipt_type: ReceiptType::Governance,
         context_digest: filler,
         schema_digest: filler,
         policy_digest: filler,
@@ -52,7 +52,7 @@ fn make_envelope(
 vr_test!(
     fn valid_envelope_passes_event_hash_check() {
         let env = make_envelope(json!({"action": "create", "id": 1}), 1, None)?;
-        env.verify_event_hash()?;
+        verify_event_hash(&env)?;
     }
 );
 
@@ -63,7 +63,7 @@ vr_test!(
 
         need(
             ok_when(matches!(
-                env.verify_event_hash(),
+                verify_event_hash(&env),
                 Err(VerifyError::EventHashMismatch { .. })
             )),
             "tampered payload should produce EventHashMismatch",
@@ -78,7 +78,7 @@ vr_test!(
 
         need(
             ok_when(matches!(
-                env.verify_envelope_version(),
+                verify_envelope_version(&env),
                 Err(VerifyError::UnsupportedVersion { version: 99 })
             )),
             "version 99 should produce UnsupportedVersion",
@@ -89,7 +89,7 @@ vr_test!(
 vr_test!(
     fn supported_version_accepted() {
         let env = make_envelope(json!({"x": 1}), 1, None)?;
-        env.verify_envelope_version()?;
+        verify_envelope_version(&env)?;
     }
 );
 

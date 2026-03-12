@@ -5,7 +5,7 @@ use ed25519_dalek::{Signer, SigningKey};
 use vr_kernel_testutils::vr_test;
 
 use super::*;
-use vr_definitions::DigestBytes;
+use vertrule_schemas::DigestBytes;
 
 /// Create a deterministic test signing key (no RNG).
 fn test_signing_key() -> SigningKey {

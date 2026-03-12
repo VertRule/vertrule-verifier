@@ -8,7 +8,7 @@ publish = false
 extraction_ready = false
 
 [dependencies.constitutional]
-vr-definitions = "0.1.0"
+vertrule-schemas = "0.1.0"
 vr-jcs = "0.1.0"
 
 [stage]

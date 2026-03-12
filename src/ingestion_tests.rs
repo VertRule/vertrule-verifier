@@ -2,7 +2,7 @@
 
 use vr_kernel_testutils::vr_test;
 
-use vr_definitions::SchemaVersion;
+use vertrule_schemas::SchemaVersion;
 
 use crate::error::VerifyError;
 
