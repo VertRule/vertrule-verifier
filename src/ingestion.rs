@@ -23,9 +23,7 @@ const STRUCTURAL_INTEGER_FIELDS: &[&str] = &["envelope_version", "logical_time"]
 /// # Errors
 ///
 /// Returns the first validation failure encountered.
-pub fn ingest_envelope(
-    raw_bytes: &[u8],
-) -> Result<(serde_json::Value, ReceiptEnvelope), VerifyError> {
+pub fn ingest_envelope(raw_bytes: &[u8]) -> Result<ReceiptEnvelope, VerifyError> {
     // 1. Parse raw bytes as JSON Value
     let value: serde_json::Value =
         serde_json::from_slice(raw_bytes).map_err(|e| VerifyError::MalformedJson {
@@ -43,11 +41,11 @@ pub fn ingest_envelope(
 
     // 5. Typed deserialization
     let envelope: ReceiptEnvelope =
-        serde_json::from_value(value.clone()).map_err(|e| VerifyError::MalformedJson {
+        serde_json::from_value(value).map_err(|e| VerifyError::MalformedJson {
             reason: e.to_string(),
         })?;
 
-    Ok((value, envelope))
+    Ok(envelope)
 }
 
 /// Ingest a chain of receipt envelopes from raw JSON bytes (JSON array).
@@ -55,9 +53,7 @@ pub fn ingest_envelope(
 /// # Errors
 ///
 /// Returns the first validation failure encountered across any element.
-pub fn ingest_chain(
-    raw_bytes: &[u8],
-) -> Result<(Vec<serde_json::Value>, Vec<ReceiptEnvelope>), VerifyError> {
+pub fn ingest_chain(raw_bytes: &[u8]) -> Result<Vec<ReceiptEnvelope>, VerifyError> {
     // Parse as array
     let array: serde_json::Value =
         serde_json::from_slice(raw_bytes).map_err(|e| VerifyError::MalformedJson {
@@ -69,14 +65,13 @@ pub fn ingest_chain(
     })?;
 
     if elements.is_empty() {
-        return Ok((Vec::new(), Vec::new()));
+        return Ok(Vec::new());
     }
 
     // Canonical form: verify the entire array is in JCS canonical form.
     // If the full array is canonical, every element is necessarily canonical.
     verify_canonical_form(raw_bytes, &array)?;
 
-    let mut values = Vec::with_capacity(elements.len());
     let mut envelopes = Vec::with_capacity(elements.len());
 
     for (i, elem) in elements.iter().enumerate() {
@@ -92,11 +87,10 @@ pub fn ingest_chain(
                 reason: format!("element {i}: {e}"),
             })?;
 
-        values.push(elem.clone());
         envelopes.push(envelope);
     }
 
-    Ok((values, envelopes))
+    Ok(envelopes)
 }
 
 /// Reject float values in structural integer fields.
@@ -127,7 +121,7 @@ fn reject_structural_floats(value: &serde_json::Value) -> Result<(), VerifyError
 ///
 /// Re-canonicalizes the parsed Value and compares to the input.
 fn verify_canonical_form(raw_bytes: &[u8], value: &serde_json::Value) -> Result<(), VerifyError> {
-    let canonical = vr_jcs::to_canon_bytes(value).map_err(|e| VerifyError::NonCanonical {
+    let canonical = vertrule_schemas::jcs::to_canon_bytes(value).map_err(|e| VerifyError::NonCanonical {
         reason: format!("canonicalization failed: {e}"),
     })?;
 

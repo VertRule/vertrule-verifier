@@ -3,9 +3,32 @@
 //! Ensures that verification results are byte-identical across runs
 //! and that key ordering in JSON does not affect digest computation.
 
-use vr_kernel_testutils::{need, ok_when, vr_test};
-
 use vr_verifier::result::VerificationStatus;
+
+macro_rules! vr_test {
+    ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
+        $(#[$meta])*
+        #[test]
+        fn $name() {
+            #[allow(clippy::redundant_closure_call)]
+            let res: anyhow::Result<()> = (|| {
+                $body
+                Ok(())
+            })();
+            if let Err(e) = res {
+                panic!("{e}");
+            }
+        }
+    };
+}
+
+fn need<T>(option: Option<T>, what: &'static str) -> anyhow::Result<T> {
+    option.ok_or_else(|| anyhow::anyhow!(what))
+}
+
+const fn ok_when(condition: bool) -> Option<()> {
+    if condition { Some(()) } else { None }
+}
 
 /// Load raw canonical bytes from `test-vectors/raw/<name>.json`.
 fn load_raw(name: &str) -> anyhow::Result<Vec<u8>> {
@@ -42,9 +65,9 @@ vr_test!(
         let payload_b = serde_json::json!({"gamma": 3, "alpha": 1, "beta": 2});
 
         let canon_a =
-            vr_jcs::to_canon_bytes(&payload_a).map_err(|e| anyhow::anyhow!("canon a: {e}"))?;
+            vertrule_schemas::jcs::to_canon_bytes(&payload_a).map_err(|e| anyhow::anyhow!("canon a: {e}"))?;
         let canon_b =
-            vr_jcs::to_canon_bytes(&payload_b).map_err(|e| anyhow::anyhow!("canon b: {e}"))?;
+            vertrule_schemas::jcs::to_canon_bytes(&payload_b).map_err(|e| anyhow::anyhow!("canon b: {e}"))?;
 
         let hash_a = hex::encode(blake3::hash(&canon_a).as_bytes());
         let hash_b = hex::encode(blake3::hash(&canon_b).as_bytes());

@@ -1,6 +1,6 @@
 //! Tests for `VerificationResult`.
 
-use vr_kernel_testutils::vr_test;
+use crate::test_support::vr_test;
 
 use super::*;
 

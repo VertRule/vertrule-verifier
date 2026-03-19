@@ -2,7 +2,7 @@
 
 use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey};
-use vr_kernel_testutils::vr_test;
+use crate::test_support::vr_test;
 
 use super::*;
 use vertrule_schemas::DigestBytes;
@@ -135,7 +135,7 @@ vr_test!(
         let receipt_digest = compute_receipt_digest(&payload)?;
 
         // Compute plain BLAKE3 (no prefix) — what event_hash uses
-        let canon_bytes = vr_jcs::to_canon_bytes(&payload)
+        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&payload)
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
         let plain_hash = blake3::hash(&canon_bytes);
         let plain_digest = DigestBytes::from_array(*plain_hash.as_bytes());

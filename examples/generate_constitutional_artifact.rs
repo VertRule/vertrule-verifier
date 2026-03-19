@@ -29,7 +29,7 @@ struct CrateSpec {
 const CONSTITUTIONAL_CRATES: &[CrateSpec] = &[
     CrateSpec {
         name: "vertrule-schemas",
-        source_rel: "vertrule-definitions",
+        source_rel: "vertrule-schemas",
         layer: 0,
         logical_time: 0,
     },
@@ -185,7 +185,7 @@ fn capture_toolchain() -> Result<(String, String), Box<dyn std::error::Error>> {
 
 /// Compute BLAKE3 hex digest of the JCS-canonical form of a JSON value.
 fn canon_hash(value: &serde_json::Value) -> Result<String, Box<dyn std::error::Error>> {
-    let bytes = vr_jcs::to_canon_bytes(value)?;
+    let bytes = vertrule_schemas::jcs::to_canon_bytes(value)?;
     Ok(hex::encode(blake3::hash(&bytes).as_bytes()))
 }
 
@@ -216,7 +216,7 @@ fn sign_payload(
     let pk = sk.verifying_key();
 
     // Domain-separated receipt digest
-    let canon_bytes = vr_jcs::to_canon_bytes(payload)?;
+    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(payload)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);
@@ -254,7 +254,7 @@ fn write_canonical(
     path: &Path,
     value: &serde_json::Value,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let canon = vr_jcs::to_canon_bytes(value)?;
+    let canon = vertrule_schemas::jcs::to_canon_bytes(value)?;
     let mut file = std::fs::File::create(path)?;
     file.write_all(&canon)?;
     file.flush()?;
@@ -349,7 +349,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let authority_set_hex = hex::encode(blake3::hash(b"constitutional-ceremony-v0").as_bytes());
     // policy_digest: BLAKE3 of the determinism policy file
     let policy_path = repositories_root
-        .join("vertrule-definitions")
+        .join("vertrule-schemas")
         .join("governance")
         .join("policies")
         .join("determinism@0.1")

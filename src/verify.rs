@@ -24,7 +24,7 @@ use crate::signature::{verify_signature, SignatureBundle};
 /// event hash verification. Errors are collected into the result.
 #[must_use]
 pub fn verify_receipt(raw_bytes: &[u8]) -> VerificationResult {
-    let (_value, envelope) = match ingest_envelope(raw_bytes) {
+    let envelope = match ingest_envelope(raw_bytes) {
         Ok(pair) => pair,
         Err(e) => return VerificationResult::invalid(e.to_string()),
     };
@@ -54,7 +54,7 @@ pub fn verify_receipt(raw_bytes: &[u8]) -> VerificationResult {
 /// consistency, duplicate detection). Errors are collected into the result.
 #[must_use]
 pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
-    let (_values, envelopes) = match ingest_chain(raw_bytes) {
+    let envelopes = match ingest_chain(raw_bytes) {
         Ok(pair) => pair,
         Err(e) => return VerificationResult::invalid(e.to_string()),
     };
@@ -109,7 +109,7 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
 /// domain-separated receipt digest. Errors are collected into the result.
 #[must_use]
 pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> VerificationResult {
-    let (_value, envelope) = match ingest_envelope(raw_bytes) {
+    let envelope = match ingest_envelope(raw_bytes) {
         Ok(pair) => pair,
         Err(e) => return VerificationResult::invalid(e.to_string()),
     };
@@ -137,19 +137,19 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
             result.signature_validation = Some(SignatureValidation {
                 present: false,
                 valid: false,
-                authority_verified: false,
+                key_id_consistent: false,
             });
             return result;
         }
     };
 
     // Verify signature over the payload (not the whole envelope)
-    match verify_signature(&envelope.payload, &bundle) {
+    match verify_signature(envelope.payload.as_value(), &bundle) {
         Ok(()) => {
             result.signature_validation = Some(SignatureValidation {
                 present: true,
                 valid: true,
-                authority_verified: true,
+                key_id_consistent: true,
             });
         }
         Err(e) => {
@@ -158,7 +158,7 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
             result.signature_validation = Some(SignatureValidation {
                 present,
                 valid: false,
-                authority_verified: false,
+                key_id_consistent: false,
             });
         }
     }

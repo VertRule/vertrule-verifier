@@ -3,11 +3,12 @@
 //! Uses `vr_test!` from `vr-kernel-testutils` (zero runtime deps).
 
 use serde_json::json;
-use vr_kernel_testutils::{need, ok_when, vr_test};
 
 use crate::chain::verify_chain;
 use crate::envelope::{verify_envelope_version, verify_event_hash, ReceiptEnvelope};
+use vertrule_schemas::CanonicalPayload;
 use crate::error::VerifyError;
+use crate::test_support::{need, ok_when, vr_test};
 use vertrule_schemas::{DigestBytes, ReceiptType, SchemaVersion};
 
 // ---------------------------------------------------------------------------
@@ -16,7 +17,7 @@ use vertrule_schemas::{DigestBytes, ReceiptType, SchemaVersion};
 
 /// Compute a BLAKE3 digest over the JCS-canonical form of a `serde_json::Value`.
 fn canon_hash(value: &serde_json::Value) -> Result<DigestBytes, VerifyError> {
-    let bytes = vr_jcs::to_canon_bytes(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let bytes = vertrule_schemas::jcs::to_canon_bytes(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
     let hash = blake3::hash(&bytes);
     Ok(DigestBytes::from_array(*hash.as_bytes()))
 }
@@ -26,9 +27,11 @@ fn make_envelope(
     payload: serde_json::Value,
     logical_time: u64,
     parent_id: Option<DigestBytes>,
-) -> Result<ReceiptEnvelope, VerifyError> {
+) -> anyhow::Result<ReceiptEnvelope> {
     let event_hash = canon_hash(&payload)?;
     let filler = DigestBytes::from_array([0u8; 32]);
+    let canonical = CanonicalPayload::new(payload)
+        .map_err(|e| anyhow::anyhow!(e))?;
     Ok(ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
         receipt_type: ReceiptType::Governance,
@@ -41,7 +44,7 @@ fn make_envelope(
         boundary_origin: None,
         digest_algorithm: None,
         canonicalization: None,
-        payload,
+        payload: canonical,
     })
 }
 
@@ -59,7 +62,8 @@ vr_test!(
 vr_test!(
     fn tampered_payload_fails_event_hash_check() {
         let mut env = make_envelope(json!({"action": "create", "id": 1}), 1, None)?;
-        env.payload = json!({"action": "delete", "id": 1});
+        env.payload = CanonicalPayload::new(json!({"action": "delete", "id": 1}))
+            .map_err(|e| anyhow::anyhow!(e))?;
 
         need(
             ok_when(matches!(

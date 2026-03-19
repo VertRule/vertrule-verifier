@@ -56,5 +56,8 @@ pub use verify::{verify_receipt, verify_receipt_chain, verify_signed_receipt};
 pub use vertrule_schemas::{DigestBytes, SchemaVersion};
 
 #[cfg(test)]
+mod test_support;
+
+#[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;

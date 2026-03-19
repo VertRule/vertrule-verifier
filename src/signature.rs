@@ -141,7 +141,7 @@ pub struct SignatureBundle {
 /// Returns error if JCS canonicalization fails.
 pub fn compute_receipt_digest(payload: &serde_json::Value) -> Result<DigestBytes, VerifyError> {
     let canon_bytes =
-        vr_jcs::to_canon_bytes(payload).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        vertrule_schemas::jcs::to_canon_bytes(payload).map_err(|e| VerifyError::Canon(format!("{e}")))?;
 
     let mut hasher = blake3::Hasher::new();
     hasher.update(RECEIPT_PREFIX);

@@ -18,7 +18,7 @@ pub use vertrule_schemas::ReceiptEnvelope;
 /// does not equal the declared `event_hash`, or [`VerifyError::Canon`] if
 /// canonicalization fails.
 pub fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
-    let canon_bytes = vr_jcs::to_canon_bytes(&envelope.payload)
+    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(envelope.payload.as_value())
         .map_err(|e| VerifyError::Canon(format!("{e}")))?;
 
     let computed = blake3::hash(&canon_bytes);

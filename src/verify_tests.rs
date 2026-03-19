@@ -1,7 +1,6 @@
 //! Tests for the verification facade.
 
-use vr_kernel_testutils::vr_test;
-
+use crate::test_support::vr_test;
 use crate::result::VerificationStatus;
 
 /// Build a single envelope JSON value with correct `event_hash`.
@@ -11,7 +10,7 @@ fn build_envelope_value(
     parent_id: Option<&str>,
     payload: serde_json::Value,
 ) -> Result<(serde_json::Value, String), anyhow::Error> {
-    let payload_canon = vr_jcs::to_canon_bytes(&payload)
+    let payload_canon = vertrule_schemas::jcs::to_canon_bytes(&payload)
         .map_err(|e| anyhow::anyhow!("payload canonicalization: {e}"))?;
     let hash = blake3::hash(&payload_canon);
     let event_hash = hex::encode(hash.as_bytes());
@@ -47,7 +46,7 @@ fn build_single_bytes(
     payload: serde_json::Value,
 ) -> Result<Vec<u8>, anyhow::Error> {
     let (value, _hash) = build_envelope_value(logical_time, None, payload)?;
-    vr_jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
+    vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 /// Build a valid chain of `count` envelopes as a JSON array byte vector.
@@ -64,7 +63,7 @@ fn build_valid_chain_bytes(count: usize) -> Result<Vec<u8>, anyhow::Error> {
     }
 
     let array = serde_json::Value::Array(elements);
-    vr_jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
+    vertrule_schemas::jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 vr_test!(
@@ -108,7 +107,7 @@ vr_test!(
         );
         let value = serde_json::Value::Object(obj);
         let bytes =
-            vr_jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+            vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -157,7 +156,7 @@ vr_test!(
 
         let array = serde_json::Value::Array(vec![env0, env1]);
         let bytes =
-            vr_jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+            vertrule_schemas::jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -174,7 +173,7 @@ vr_test!(
 
         let array = serde_json::Value::Array(vec![env0, env1]);
         let bytes =
-            vr_jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+            vertrule_schemas::jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);

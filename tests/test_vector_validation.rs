@@ -5,13 +5,36 @@
 //! and verify that the verifier accepts valid vectors and rejects invalid ones
 //! with the correct error variant.
 
-use vr_kernel_testutils::{need, ok_when, vr_test};
-
 use vr_verifier::envelope::{verify_algorithms, verify_envelope_version, verify_event_hash};
 use vr_verifier::chain::verify_chain;
 use vr_verifier::envelope::ReceiptEnvelope;
 use vr_verifier::error::VerifyError;
 use vr_verifier::result::VerificationStatus;
+
+macro_rules! vr_test {
+    ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
+        $(#[$meta])*
+        #[test]
+        fn $name() {
+            #[allow(clippy::redundant_closure_call)]
+            let res: anyhow::Result<()> = (|| {
+                $body
+                Ok(())
+            })();
+            if let Err(e) = res {
+                panic!("{e}");
+            }
+        }
+    };
+}
+
+fn need<T>(option: Option<T>, what: &'static str) -> anyhow::Result<T> {
+    option.ok_or_else(|| anyhow::anyhow!(what))
+}
+
+const fn ok_when(condition: bool) -> Option<()> {
+    if condition { Some(()) } else { None }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -311,8 +334,8 @@ vr_test!(
         )?;
         need(ok_when(sv.valid), "signature should be valid")?;
         need(
-            ok_when(sv.authority_verified),
-            "authority should be verified",
+            ok_when(sv.key_id_consistent),
+            "key_id should be consistent with public key",
         )?;
     }
 );
@@ -345,7 +368,7 @@ vr_test!(
             "action": "create",
             "value": 42
         });
-        let canon_bytes = vr_jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
         let computed = hex::encode(blake3::hash(&canon_bytes).as_bytes());
 
         let vector = load_vector("valid_single_envelope")?;

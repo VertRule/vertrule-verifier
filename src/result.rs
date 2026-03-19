@@ -91,8 +91,14 @@ pub struct SignatureValidation {
     pub present: bool,
     /// Whether the signature verified successfully.
     pub valid: bool,
-    /// Whether the authority (`key_id`) was verified.
-    pub authority_verified: bool,
+    /// Whether the `key_id` in the signature bundle is consistent with the
+    /// public key (i.e. `key_id == BLAKE3(public_key)[..12]`).
+    ///
+    /// This is a self-consistency check, NOT a trust or authority assertion.
+    /// It does not verify that the key belongs to a trusted party, is
+    /// registered in any authority set, or has governance approval.
+    /// Real authority verification requires a trust store (future work).
+    pub key_id_consistent: bool,
 }
 
 impl VerificationResult {
@@ -123,7 +129,7 @@ impl VerificationResult {
         result.signature_validation = Some(SignatureValidation {
             present: false,
             valid: false,
-            authority_verified: false,
+            key_id_consistent: false,
         });
         result
     }
@@ -161,7 +167,7 @@ impl VerificationResult {
     pub fn digest(&self) -> Result<DigestBytes, VerifyError> {
         let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
         let canon_bytes =
-            vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+            vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
         let hash = blake3::hash(&canon_bytes);
         Ok(DigestBytes::from_array(*hash.as_bytes()))
     }

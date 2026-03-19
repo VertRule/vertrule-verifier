@@ -1,7 +1,6 @@
 //! Tests for fail-closed ingestion.
 
-use vr_kernel_testutils::vr_test;
-
+use crate::test_support::vr_test;
 use vertrule_schemas::SchemaVersion;
 
 use crate::error::VerifyError;
@@ -19,13 +18,13 @@ fn valid_canonical_envelope_bytes() -> Result<Vec<u8>, anyhow::Error> {
         "payload": {"key": "value"}
     });
     // Canonicalize for the canonical form check
-    vr_jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
+    vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 vr_test!(
     fn test_valid_canonical_envelope_ingests() {
         let bytes = valid_canonical_envelope_bytes()?;
-        let (_value, envelope) = super::ingest_envelope(&bytes)?;
+        let envelope = super::ingest_envelope(&bytes)?;
         assert_eq!(envelope.envelope_version, SchemaVersion::V1);
     }
 );
@@ -82,7 +81,7 @@ vr_test!(
             "bogus": 42
         });
         let bytes =
-            vr_jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
+            vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
         let Err(err) = super::ingest_envelope(&bytes) else {
             anyhow::bail!("expected error, got Ok")
         };

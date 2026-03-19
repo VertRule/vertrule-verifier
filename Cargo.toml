@@ -3,7 +3,7 @@ publish = false
 name = "vr-verifier"
 version = "0.1.0"
 edition = "2021"
-license-file = "../vertrule-runtime/LICENSES/PROPRIETARY.txt"
+license = "Apache-2.0"
 description = "Public-facing verifier for VertRule governance receipts -- zero runtime deps"
 
 [[bin]]
@@ -18,14 +18,13 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
-vertrule-schemas = { path = "../vertrule-definitions" }
-vr-jcs = { path = "../vertrule-runtime/crates/vr-jcs" }
+vertrule-schemas = { path = "../vertrule-schemas" }
 
 [dev-dependencies]
 proptest = "1"
 anyhow = "1"
 tracing = "0.1"
-vr-kernel-testutils = { path = "../vertrule-runtime/crates/vr-kernel-testutils", features = ["enabled"] }
+
 
 [lints.rust]
 unsafe_code = "warn"

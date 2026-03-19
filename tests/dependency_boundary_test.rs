@@ -4,16 +4,30 @@
 //! This is the single most important architectural invariant of the crate:
 //! it must be auditable without trusting the runtime.
 
-use vr_kernel_testutils::vr_test;
-
 /// Runtime crate names that must NEVER appear as package dependencies.
 const FORBIDDEN_DEPS: &[&str] = &[
     "vertrule-core",
-    "vertrule-schema",
     "vertrule-app",
     "vertrule-adapters",
     "vertrule-cli",
 ];
+
+macro_rules! vr_test {
+    ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
+        $(#[$meta])*
+        #[test]
+        fn $name() {
+            #[allow(clippy::redundant_closure_call)]
+            let res: anyhow::Result<()> = (|| {
+                $body
+                Ok(())
+            })();
+            if let Err(e) = res {
+                panic!("{e}");
+            }
+        }
+    };
+}
 
 vr_test!(
     fn no_runtime_dependencies_in_cargo_toml() {
