@@ -1,0 +1,13 @@
+{
+  "schema": "vr.governance.binding.policy-set/v1",
+  "bindings": [
+    {
+      "policy_id": "determinism@0.1",
+      "source": "governance/policies/determinism@0.1",
+      "mode": "bind+overlay",
+      "overlay": "overlays/determinism@0.1.toml",
+      "notes": "Scope overlay restricts to src/**/*.rs; no allowlist exceptions"
+    }
+  ],
+  "repo_local_policies": []
+}

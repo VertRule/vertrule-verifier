@@ -1,0 +1,6 @@
+{
+  "schema": "vr.governance.binding.authority-set/v1",
+  "authority_set_id": "repo-default",
+  "source": "governance/authority-sets/default.yaml",
+  "epoch": 1
+}
