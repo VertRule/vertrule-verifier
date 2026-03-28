@@ -11,7 +11,9 @@ use crate::chain::check_chain_detail;
 use crate::envelope::{
     verify_algorithms, verify_envelope_version, verify_event_hash, ReceiptEnvelope,
 };
-use crate::ingestion::{ingest_chain, ingest_chain_with_limits, ingest_envelope, ingest_envelope_with_limits};
+use crate::ingestion::{
+    ingest_chain, ingest_chain_with_limits, ingest_envelope, ingest_envelope_with_limits,
+};
 use crate::limits::VerifierLimits;
 use crate::result::{
     ChainValidation, ContextConsistency, DigestValidation, PolicyConsistency, SchemaConsistency,

@@ -91,22 +91,40 @@ impl std::fmt::Display for LimitViolation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InputTooLarge { actual, limit } => {
-                write!(f, "input too large: {actual} bytes exceeds limit of {limit}")
+                write!(
+                    f,
+                    "input too large: {actual} bytes exceeds limit of {limit}"
+                )
             }
             Self::DepthExceeded { actual, limit } => {
-                write!(f, "depth exceeded: {actual} levels exceeds limit of {limit}")
+                write!(
+                    f,
+                    "depth exceeded: {actual} levels exceeds limit of {limit}"
+                )
             }
             Self::NodeCountExceeded { actual, limit } => {
-                write!(f, "node count exceeded: {actual} nodes exceeds limit of {limit}")
+                write!(
+                    f,
+                    "node count exceeded: {actual} nodes exceeds limit of {limit}"
+                )
             }
             Self::ObjectTooLarge { actual, limit } => {
-                write!(f, "object too large: {actual} keys exceeds limit of {limit}")
+                write!(
+                    f,
+                    "object too large: {actual} keys exceeds limit of {limit}"
+                )
             }
             Self::ArrayTooLarge { actual, limit } => {
-                write!(f, "array too large: {actual} elements exceeds limit of {limit}")
+                write!(
+                    f,
+                    "array too large: {actual} elements exceeds limit of {limit}"
+                )
             }
             Self::ChainTooLong { actual, limit } => {
-                write!(f, "chain too long: {actual} envelopes exceeds limit of {limit}")
+                write!(
+                    f,
+                    "chain too long: {actual} envelopes exceeds limit of {limit}"
+                )
             }
         }
     }
@@ -117,7 +135,10 @@ impl std::fmt::Display for LimitViolation {
 /// # Errors
 ///
 /// Returns [`LimitViolation::InputTooLarge`] if `raw_bytes.len()` exceeds the limit.
-pub const fn check_byte_limit(raw_bytes: &[u8], limits: &VerifierLimits) -> Result<(), LimitViolation> {
+pub const fn check_byte_limit(
+    raw_bytes: &[u8],
+    limits: &VerifierLimits,
+) -> Result<(), LimitViolation> {
     if raw_bytes.len() > limits.max_bytes {
         return Err(LimitViolation::InputTooLarge {
             actual: raw_bytes.len(),
@@ -132,7 +153,10 @@ pub const fn check_byte_limit(raw_bytes: &[u8], limits: &VerifierLimits) -> Resu
 /// # Errors
 ///
 /// Returns [`LimitViolation::ChainTooLong`] if `length` exceeds the limit.
-pub const fn check_chain_length(length: usize, limits: &VerifierLimits) -> Result<(), LimitViolation> {
+pub const fn check_chain_length(
+    length: usize,
+    limits: &VerifierLimits,
+) -> Result<(), LimitViolation> {
     if length > limits.max_chain_length {
         return Err(LimitViolation::ChainTooLong {
             actual: length,

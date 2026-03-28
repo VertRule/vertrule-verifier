@@ -43,9 +43,7 @@ pub fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), VerifyE
     if v == vertrule_schemas::SchemaVersion::V1 || v == vertrule_schemas::SchemaVersion::V2 {
         Ok(())
     } else {
-        Err(VerifyError::UnsupportedVersion {
-            version: v.get(),
-        })
+        Err(VerifyError::UnsupportedVersion { version: v.get() })
     }
 }
 

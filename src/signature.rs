@@ -149,8 +149,8 @@ pub fn compute_receipt_digest(
 ) -> Result<DigestBytes, VerifyError> {
     let canon_bytes = if envelope.envelope_version.commits_full_envelope() {
         // V2: hash the full envelope minus event_hash
-        let mut value = serde_json::to_value(envelope)
-            .map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        let mut value =
+            serde_json::to_value(envelope).map_err(|e| VerifyError::Canon(format!("{e}")))?;
         if let serde_json::Value::Object(ref mut map) = value {
             map.remove("event_hash");
         }

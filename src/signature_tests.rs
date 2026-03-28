@@ -29,13 +29,12 @@ fn zero_digest() -> DigestBytes {
 fn make_v1_test_envelope(
     payload_json: serde_json::Value,
 ) -> Result<ReceiptEnvelope, anyhow::Error> {
-    let payload = CanonicalPayload::new(payload_json)
-        .map_err(|e| anyhow::anyhow!("payload: {e}"))?;
+    let payload =
+        CanonicalPayload::new(payload_json).map_err(|e| anyhow::anyhow!("payload: {e}"))?;
     let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(payload.as_value())
         .map_err(|e| anyhow::anyhow!("canon: {e}"))?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&canon_bytes).as_bytes());
-    let logical_time = IJsonUInt::new(1)
-        .map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
+    let logical_time = IJsonUInt::new(1).map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
 
     Ok(ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
@@ -61,8 +60,8 @@ fn sign_envelope(
     let sk = test_signing_key();
     let pk = sk.verifying_key();
 
-    let receipt_digest = compute_receipt_digest(envelope)
-        .map_err(|e| anyhow::anyhow!("digest: {e}"))?;
+    let receipt_digest =
+        compute_receipt_digest(envelope).map_err(|e| anyhow::anyhow!("digest: {e}"))?;
     let canonical_message = construct_canonical_message(&receipt_digest, timestamp);
     let sig = sk.sign(&canonical_message);
 

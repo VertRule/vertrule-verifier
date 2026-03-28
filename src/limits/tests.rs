@@ -82,10 +82,7 @@ fn object_size_passes_at_limit() {
 fn object_size_fails_over() {
     let v = json!({"a": 1, "b": 2, "c": 3, "d": 4}); // 4 keys > 3
     let result = check_structure(&v, &tiny_limits());
-    assert!(matches!(
-        result,
-        Err(LimitViolation::ObjectTooLarge { .. })
-    ));
+    assert!(matches!(result, Err(LimitViolation::ObjectTooLarge { .. })));
 }
 
 // ── Array size ─────────────────────────────────────────────────────
@@ -100,10 +97,7 @@ fn array_size_passes_at_limit() {
 fn array_size_fails_over() {
     let v = json!([1, 2, 3, 4]); // 4 elements > 3
     let result = check_structure(&v, &tiny_limits());
-    assert!(matches!(
-        result,
-        Err(LimitViolation::ArrayTooLarge { .. })
-    ));
+    assert!(matches!(result, Err(LimitViolation::ArrayTooLarge { .. })));
 }
 
 // ── Chain length ───────────────────────────────────────────────────

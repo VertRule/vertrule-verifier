@@ -3,31 +3,38 @@
   "description": "VertRule governance profile for receipt envelope verification",
   "unknown_field_policy": "FAIL",
   "missing_field_policy": "FAIL",
+  "additional_properties": false,
+  "supported_envelope_versions": [1, 2],
   "identity_triple": {
     "spec_version": 1,
     "canonicalization": "JCS",
     "commitment_primitive": "BLAKE3"
   },
+  "commitment_scope": {
+    "v1": "payload_only",
+    "v2": "full_envelope_sans_event_hash"
+  },
   "envelope": {
     "required_fields": [
-      { "name": "envelope_version", "type": "u32", "description": "Schema version (currently 1)" },
-      { "name": "receipt_type", "type": "string", "description": "Discriminator from known set" },
+      { "name": "envelope_version", "type": "u32", "description": "Schema version (1 or 2)" },
+      { "name": "receipt_type", "type": "string", "description": "Discriminator from known set (lowercase only)" },
       { "name": "context_digest", "type": "digest_hex", "description": "Digest of governance context" },
       { "name": "schema_digest", "type": "digest_hex", "description": "Digest of schema used" },
       { "name": "policy_digest", "type": "digest_hex", "description": "Digest of active policy" },
       { "name": "logical_time", "type": "u64", "description": "Monotonically increasing clock" },
-      { "name": "event_hash", "type": "digest_hex", "description": "Digest of JCS-canonical payload" },
-      { "name": "payload", "type": "object", "description": "Domain-specific receipt data" }
+      { "name": "event_hash", "type": "digest_hex", "description": "Commitment digest (V1: payload, V2: all fields)" },
+      { "name": "payload", "type": "object", "description": "Domain-specific receipt data (float-free)" }
     ],
     "optional_fields": [
       { "name": "parent_id", "type": "digest_hex", "description": "Previous envelope event_hash" },
-      { "name": "boundary_origin", "type": "string", "description": "Provenance tag from known set" },
-      { "name": "digest_algorithm", "type": "string", "description": "Declared commitment primitive (v1 default: BLAKE3)" },
-      { "name": "canonicalization", "type": "string", "description": "Declared canonicalization scheme (v1 default: JCS)" }
+      { "name": "boundary_origin", "type": "string", "description": "Provenance tag from known set (lowercase only)" },
+      { "name": "digest_algorithm", "type": "string", "description": "Declared commitment primitive (default: BLAKE3)" },
+      { "name": "canonicalization", "type": "string", "description": "Declared canonicalization scheme (default: JCS)" }
     ]
   },
   "known_receipt_types": ["event", "llm", "mri", "governance", "adapter", "projection", "training"],
   "known_boundary_origins": ["engine", "adapter", "numeric", "governance", "model", "training"],
+  "discriminator_case": "lowercase_only",
   "structural_integer_fields": ["envelope_version", "logical_time"],
   "digest_format": {
     "algorithm": "BLAKE3",

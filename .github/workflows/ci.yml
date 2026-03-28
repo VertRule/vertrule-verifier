@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vertrule-verifier
+      - uses: actions/checkout@v4
+        with:
+          repository: VertRule/vertrule-schemas
+          path: vertrule-schemas
+      - uses: actions/checkout@v4
+        with:
+          repository: VertRule/vr-jcs
+          path: vr-jcs
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: vertrule-verifier
+
+      - name: Format
+        working-directory: vertrule-verifier
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        working-directory: vertrule-verifier
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        working-directory: vertrule-verifier
+        run: cargo test
+
+      - name: Test vectors
+        working-directory: vertrule-verifier
+        run: cargo test --test test_vector_validation
+
+      - name: Doc
+        working-directory: vertrule-verifier
+        run: cargo doc --no-deps
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vertrule-verifier
+      - uses: actions/checkout@v4
+        with:
+          repository: VertRule/vertrule-schemas
+          path: vertrule-schemas
+      - uses: actions/checkout@v4
+        with:
+          repository: VertRule/vr-jcs
+          path: vr-jcs
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: vertrule-verifier
+
+      - name: WASM build
+        working-directory: vertrule-verifier
+        run: cargo build --target wasm32-unknown-unknown --features wasm --lib

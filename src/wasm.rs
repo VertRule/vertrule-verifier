@@ -44,9 +44,7 @@ fn error_json(message: &str) -> String {
     // Manual construction avoids depending on serde for the fallback path.
     // Fields are in JCS sort order (alphabetical).
     let escaped = message.replace('\\', "\\\\").replace('"', "\\\"");
-    format!(
-        "{{\"errors\":[\"{escaped}\"],\"status\":\"INTERNAL_VERIFIER_ERROR\"}}"
-    )
+    format!("{{\"errors\":[\"{escaped}\"],\"status\":\"INTERNAL_VERIFIER_ERROR\"}}")
 }
 
 /// Verify a single receipt envelope.
