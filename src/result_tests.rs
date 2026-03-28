@@ -18,16 +18,6 @@ vr_test!(
 );
 
 vr_test!(
-    fn test_unsigned_single_serializes() {
-        let result = VerificationResult::unsigned_single();
-        let value =
-            serde_json::to_value(&result).map_err(|e| anyhow::anyhow!("serialize failed: {e}"))?;
-        assert_eq!(value["status"], "UNSIGNED");
-        assert_eq!(value["signature_validation"]["present"], false);
-    }
-);
-
-vr_test!(
     fn test_invalid_contains_error() {
         let result = VerificationResult::invalid("something broke".to_string());
         assert_eq!(result.status, VerificationStatus::Invalid);

@@ -26,8 +26,8 @@
       { "name": "canonicalization", "type": "string", "description": "Declared canonicalization scheme (v1 default: JCS)" }
     ]
   },
-  "known_receipt_types": ["Event", "Llm", "Mri", "Governance", "Adapter", "Projection", "Training"],
-  "known_boundary_origins": ["Engine", "Adapter", "Numeric", "Governance", "Model", "Training"],
+  "known_receipt_types": ["event", "llm", "mri", "governance", "adapter", "projection", "training"],
+  "known_boundary_origins": ["engine", "adapter", "numeric", "governance", "model", "training"],
   "structural_integer_fields": ["envelope_version", "logical_time"],
   "digest_format": {
     "algorithm": "BLAKE3",

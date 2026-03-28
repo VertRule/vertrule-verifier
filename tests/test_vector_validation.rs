@@ -5,9 +5,9 @@
 //! and verify that the verifier accepts valid vectors and rejects invalid ones
 //! with the correct error variant.
 
-use vr_verifier::envelope::{verify_algorithms, verify_envelope_version, verify_event_hash};
 use vr_verifier::chain::verify_chain;
 use vr_verifier::envelope::ReceiptEnvelope;
+use vr_verifier::envelope::{verify_algorithms, verify_envelope_version, verify_event_hash};
 use vr_verifier::error::VerifyError;
 use vr_verifier::result::VerificationStatus;
 
@@ -33,7 +33,11 @@ fn need<T>(option: Option<T>, what: &'static str) -> anyhow::Result<T> {
 }
 
 const fn ok_when(condition: bool) -> Option<()> {
-    if condition { Some(()) } else { None }
+    if condition {
+        Some(())
+    } else {
+        None
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -169,18 +173,22 @@ vr_test!(
 
 vr_test!(
     fn invalid_version_is_rejected() {
-        let vector = load_vector("invalid_version")?;
-        let env = parse_single(&vector)?;
-        verify_event_hash(&env)?;
-        let result = verify_envelope_version(&env);
-        need(ok_when(result.is_err()), "version 99 should be rejected")?;
-        let err = need(result.err(), "expected error variant")?;
+        // Version 99 is rejected at deserialization (SchemaVersion validates on
+        // construction). The facade catches this and returns INVALID.
+        let raw = load_raw("invalid_version")?;
+        let result = vr_verifier::verify_receipt(&raw);
         need(
-            ok_when(matches!(
-                err,
-                VerifyError::UnsupportedVersion { version: 99 }
-            )),
-            "error should be UnsupportedVersion(99)",
+            ok_when(result.status == VerificationStatus::Invalid),
+            "unsupported version should produce INVALID",
+        )?;
+        need(
+            ok_when(
+                result
+                    .errors
+                    .iter()
+                    .any(|e| e.contains("unsupported") || e.contains("version")),
+            ),
+            "error should mention unsupported version",
         )?;
     }
 );
@@ -237,6 +245,23 @@ vr_test!(
 );
 
 vr_test!(
+    fn invalid_schema_inconsistent_is_rejected() {
+        let vector = load_vector("invalid_schema_inconsistent")?;
+        let chain = parse_chain(&vector)?;
+        let result = verify_chain(&chain);
+        need(
+            ok_when(result.is_err()),
+            "inconsistent schema should be rejected",
+        )?;
+        let err = need(result.err(), "expected error variant")?;
+        need(
+            ok_when(matches!(err, VerifyError::SchemaInconsistent { .. })),
+            "error should be SchemaInconsistent",
+        )?;
+    }
+);
+
+vr_test!(
     fn invalid_bit_flip_is_rejected() {
         let vector = load_vector("invalid_bit_flip")?;
         let env = parse_single(&vector)?;
@@ -249,6 +274,65 @@ vr_test!(
         need(
             ok_when(matches!(err, VerifyError::EventHashMismatch { .. })),
             "error should be EventHashMismatch",
+        )?;
+    }
+);
+
+// ---------------------------------------------------------------------------
+// Ingestion-path vectors (facade API -- tests schema profile rejection)
+// ---------------------------------------------------------------------------
+
+vr_test!(
+    fn facade_unknown_field_rejected() {
+        let raw = load_raw("invalid_unknown_field")?;
+        let result = vr_verifier::verify_receipt(&raw);
+        need(
+            ok_when(result.status == VerificationStatus::Invalid),
+            "unknown field should produce INVALID",
+        )?;
+        need(
+            ok_when(result.errors.iter().any(|e| e.contains("unknown field"))),
+            "error should mention unknown field",
+        )?;
+    }
+);
+
+vr_test!(
+    fn facade_missing_required_field_rejected() {
+        let raw = load_raw("invalid_missing_required")?;
+        let result = vr_verifier::verify_receipt(&raw);
+        need(
+            ok_when(result.status == VerificationStatus::Invalid),
+            "missing required field should produce INVALID",
+        )?;
+        need(
+            ok_when(
+                result
+                    .errors
+                    .iter()
+                    .any(|e| e.contains("missing required field")),
+            ),
+            "error should mention missing required field",
+        )?;
+    }
+);
+
+vr_test!(
+    fn facade_unknown_receipt_type_rejected() {
+        let raw = load_raw("invalid_unknown_receipt_type")?;
+        let result = vr_verifier::verify_receipt(&raw);
+        need(
+            ok_when(result.status == VerificationStatus::Invalid),
+            "unknown receipt type should produce INVALID",
+        )?;
+        need(
+            ok_when(
+                result
+                    .errors
+                    .iter()
+                    .any(|e| e.contains("unknown receipt type")),
+            ),
+            "error should mention unknown receipt type",
         )?;
     }
 );
@@ -368,7 +452,8 @@ vr_test!(
             "action": "create",
             "value": 42
         });
-        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let canon_bytes =
+            vertrule_schemas::jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
         let computed = hex::encode(blake3::hash(&canon_bytes).as_bytes());
 
         let vector = load_vector("valid_single_envelope")?;

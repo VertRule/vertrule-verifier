@@ -10,7 +10,7 @@
       "value": 1
     },
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "Governance",
+    "receipt_type": "governance",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "description": "Envelope with unsupported version (99). Verifier must reject.",

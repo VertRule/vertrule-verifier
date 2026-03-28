@@ -29,7 +29,7 @@ const OPTIONAL_ENVELOPE_FIELDS: &[&str] = &[
     "canonicalization",
 ];
 
-/// Known `receipt_type` values (case-insensitive match).
+/// Known `receipt_type` values (canonical lowercase only).
 const KNOWN_RECEIPT_TYPES: &[&str] = &[
     "event",
     "llm",
@@ -40,7 +40,7 @@ const KNOWN_RECEIPT_TYPES: &[&str] = &[
     "training",
 ];
 
-/// Known `boundary_origin` values (case-insensitive match).
+/// Known `boundary_origin` values (canonical lowercase only).
 const KNOWN_BOUNDARY_ORIGINS: &[&str] = &[
     "engine",
     "adapter",
@@ -118,16 +118,14 @@ fn is_known_field(field: &str) -> bool {
     REQUIRED_ENVELOPE_FIELDS.contains(&field) || OPTIONAL_ENVELOPE_FIELDS.contains(&field)
 }
 
-/// Check if a receipt type value is known (case-insensitive).
+/// Check if a receipt type value is known (exact lowercase match only).
 fn is_known_receipt_type(value: &str) -> bool {
-    let lower = value.to_lowercase();
-    KNOWN_RECEIPT_TYPES.contains(&lower.as_str())
+    KNOWN_RECEIPT_TYPES.contains(&value)
 }
 
-/// Check if a boundary origin value is known (case-insensitive).
+/// Check if a boundary origin value is known (exact lowercase match only).
 fn is_known_boundary_origin(value: &str) -> bool {
-    let lower = value.to_lowercase();
-    KNOWN_BOUNDARY_ORIGINS.contains(&lower.as_str())
+    KNOWN_BOUNDARY_ORIGINS.contains(&value)
 }
 
 #[cfg(test)]

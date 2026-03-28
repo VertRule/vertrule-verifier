@@ -28,7 +28,7 @@ vr_test!(
     fn test_valid_with_optional_fields() {
         let mut json = valid_envelope_json();
         json["parent_id"] = serde_json::json!("e".repeat(64));
-        json["boundary_origin"] = serde_json::json!("Engine");
+        json["boundary_origin"] = serde_json::json!("engine");
         validate_envelope_schema(&json)?;
     }
 );
@@ -109,18 +109,50 @@ vr_test!(
 );
 
 vr_test!(
-    fn test_receipt_type_case_insensitive() {
+    fn test_receipt_type_title_case_rejected() {
         let mut json = valid_envelope_json();
-        json["receipt_type"] = serde_json::json!("GOVERNANCE");
-        validate_envelope_schema(&json)?;
+        json["receipt_type"] = serde_json::json!("Governance");
+        let Err(err) = validate_envelope_schema(&json) else {
+            anyhow::bail!("expected error for title case receipt_type")
+        };
+        match err {
+            VerifyError::UnknownReceiptType { value } => {
+                assert_eq!(value, "Governance");
+            }
+            other => anyhow::bail!("expected UnknownReceiptType, got: {other}"),
+        }
     }
 );
 
 vr_test!(
-    fn test_boundary_origin_case_insensitive() {
+    fn test_receipt_type_upper_case_rejected() {
         let mut json = valid_envelope_json();
-        json["boundary_origin"] = serde_json::json!("ADAPTER");
-        validate_envelope_schema(&json)?;
+        json["receipt_type"] = serde_json::json!("GOVERNANCE");
+        let Err(err) = validate_envelope_schema(&json) else {
+            anyhow::bail!("expected error for upper case receipt_type")
+        };
+        match err {
+            VerifyError::UnknownReceiptType { value } => {
+                assert_eq!(value, "GOVERNANCE");
+            }
+            other => anyhow::bail!("expected UnknownReceiptType, got: {other}"),
+        }
+    }
+);
+
+vr_test!(
+    fn test_boundary_origin_title_case_rejected() {
+        let mut json = valid_envelope_json();
+        json["boundary_origin"] = serde_json::json!("Adapter");
+        let Err(err) = validate_envelope_schema(&json) else {
+            anyhow::bail!("expected error for title case boundary_origin")
+        };
+        match err {
+            VerifyError::UnknownBoundaryOrigin { value } => {
+                assert_eq!(value, "Adapter");
+            }
+            other => anyhow::bail!("expected UnknownBoundaryOrigin, got: {other}"),
+        }
     }
 );
 
@@ -140,13 +172,13 @@ vr_test!(
 vr_test!(
     fn test_all_receipt_types_accepted() {
         let types = [
-            "Event",
-            "Llm",
-            "Mri",
-            "Governance",
-            "Adapter",
-            "Projection",
-            "Training",
+            "event",
+            "llm",
+            "mri",
+            "governance",
+            "adapter",
+            "projection",
+            "training",
         ];
         for t in types {
             let mut json = valid_envelope_json();
@@ -159,17 +191,78 @@ vr_test!(
 vr_test!(
     fn test_all_boundary_origins_accepted() {
         let origins = [
-            "Engine",
-            "Adapter",
-            "Numeric",
-            "Governance",
-            "Model",
-            "Training",
+            "engine",
+            "adapter",
+            "numeric",
+            "governance",
+            "model",
+            "training",
         ];
         for o in origins {
             let mut json = valid_envelope_json();
             json["boundary_origin"] = serde_json::json!(o);
             validate_envelope_schema(&json)?;
+        }
+    }
+);
+
+vr_test!(
+    fn test_receipt_types_match_schema_crate() {
+        // Guard against drift: every ReceiptType variant in vertrule-schemas must
+        // be in KNOWN_RECEIPT_TYPES, and the counts must match.
+        let schema_types = [
+            vertrule_schemas::ReceiptType::Event,
+            vertrule_schemas::ReceiptType::Llm,
+            vertrule_schemas::ReceiptType::Mri,
+            vertrule_schemas::ReceiptType::Governance,
+            vertrule_schemas::ReceiptType::Adapter,
+            vertrule_schemas::ReceiptType::Projection,
+            vertrule_schemas::ReceiptType::Training,
+        ];
+        if schema_types.len() != super::KNOWN_RECEIPT_TYPES.len() {
+            anyhow::bail!(
+                "ReceiptType variant count ({}) != KNOWN_RECEIPT_TYPES count ({})",
+                schema_types.len(),
+                super::KNOWN_RECEIPT_TYPES.len(),
+            );
+        }
+        for variant in &schema_types {
+            let name = format!("{variant}");
+            if !super::KNOWN_RECEIPT_TYPES.contains(&name.as_str()) {
+                anyhow::bail!(
+                    "ReceiptType::{variant:?} (serializes as \"{name}\") not in KNOWN_RECEIPT_TYPES"
+                );
+            }
+        }
+    }
+);
+
+vr_test!(
+    fn test_boundary_origins_match_schema_crate() {
+        // Guard against drift: every BoundaryOrigin variant in vertrule-schemas must
+        // be in KNOWN_BOUNDARY_ORIGINS, and the counts must match.
+        let schema_origins = [
+            vertrule_schemas::BoundaryOrigin::Engine,
+            vertrule_schemas::BoundaryOrigin::Adapter,
+            vertrule_schemas::BoundaryOrigin::Numeric,
+            vertrule_schemas::BoundaryOrigin::Governance,
+            vertrule_schemas::BoundaryOrigin::Model,
+            vertrule_schemas::BoundaryOrigin::Training,
+        ];
+        if schema_origins.len() != super::KNOWN_BOUNDARY_ORIGINS.len() {
+            anyhow::bail!(
+                "BoundaryOrigin variant count ({}) != KNOWN_BOUNDARY_ORIGINS count ({})",
+                schema_origins.len(),
+                super::KNOWN_BOUNDARY_ORIGINS.len(),
+            );
+        }
+        for variant in &schema_origins {
+            let name = format!("{variant}");
+            if !super::KNOWN_BOUNDARY_ORIGINS.contains(&name.as_str()) {
+                anyhow::bail!(
+                    "BoundaryOrigin::{variant:?} (serializes as \"{name}\") not in KNOWN_BOUNDARY_ORIGINS"
+                );
+            }
         }
     }
 );
@@ -211,37 +304,31 @@ vr_test!(
             );
         }
 
-        // Receipt types (case-insensitive)
-        let profile_types: Vec<String> = profile["known_receipt_types"]
+        // Receipt types (exact lowercase match)
+        let profile_types: Vec<&str> = profile["known_receipt_types"]
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("known_receipt_types must be array"))?
             .iter()
-            .filter_map(|v| v.as_str().map(str::to_lowercase))
+            .filter_map(|v| v.as_str())
             .collect();
-        let code_types: Vec<String> = super::KNOWN_RECEIPT_TYPES
-            .iter()
-            .map(|&s| s.to_lowercase())
-            .collect();
-        if profile_types != code_types {
+        if profile_types.as_slice() != super::KNOWN_RECEIPT_TYPES {
             anyhow::bail!(
-                "receipt types mismatch:\n  profile: {profile_types:?}\n  code: {code_types:?}"
+                "receipt types mismatch:\n  profile: {profile_types:?}\n  code: {:?}",
+                super::KNOWN_RECEIPT_TYPES
             );
         }
 
-        // Boundary origins (case-insensitive)
-        let profile_origins: Vec<String> = profile["known_boundary_origins"]
+        // Boundary origins (exact lowercase match)
+        let profile_origins: Vec<&str> = profile["known_boundary_origins"]
             .as_array()
             .ok_or_else(|| anyhow::anyhow!("known_boundary_origins must be array"))?
             .iter()
-            .filter_map(|v| v.as_str().map(str::to_lowercase))
+            .filter_map(|v| v.as_str())
             .collect();
-        let code_origins: Vec<String> = super::KNOWN_BOUNDARY_ORIGINS
-            .iter()
-            .map(|&s| s.to_lowercase())
-            .collect();
-        if profile_origins != code_origins {
+        if profile_origins.as_slice() != super::KNOWN_BOUNDARY_ORIGINS {
             anyhow::bail!(
-                "boundary origins mismatch:\n  profile: {profile_origins:?}\n  code: {code_origins:?}"
+                "boundary origins mismatch:\n  profile: {profile_origins:?}\n  code: {:?}",
+                super::KNOWN_BOUNDARY_ORIGINS
             );
         }
     }

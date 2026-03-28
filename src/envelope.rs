@@ -3,14 +3,15 @@
 //! The public receipt envelope nouns live in `vertrule-schemas`.
 //! This module keeps only the verifier behavior that operates on that type.
 
-use vertrule_schemas::common::algorithms::{CANONICALIZATION, DIGEST_ALGORITHM};
-
 use crate::error::VerifyError;
 
 pub use vertrule_schemas::ReceiptEnvelope;
 
-/// Verify that `event_hash` matches the BLAKE3 digest of the JCS-canonical
-/// payload.
+/// Verify that `event_hash` matches the commitment for this envelope's
+/// schema version.
+///
+/// - **V1**: `event_hash` = `BLAKE3(JCS(payload))`
+/// - **V2**: `event_hash` = `BLAKE3(JCS(envelope \ {event_hash}))`
 ///
 /// # Errors
 ///
@@ -18,11 +19,8 @@ pub use vertrule_schemas::ReceiptEnvelope;
 /// does not equal the declared `event_hash`, or [`VerifyError::Canon`] if
 /// canonicalization fails.
 pub fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
-    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(envelope.payload.as_value())
+    let computed_digest = vertrule_schemas::compute_event_hash(envelope)
         .map_err(|e| VerifyError::Canon(format!("{e}")))?;
-
-    let computed = blake3::hash(&canon_bytes);
-    let computed_digest = vertrule_schemas::DigestBytes::from_array(*computed.as_bytes());
 
     if computed_digest == envelope.event_hash {
         Ok(())
@@ -41,11 +39,12 @@ pub fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> 
 /// Returns [`VerifyError::UnsupportedVersion`] when the version is not
 /// recognised.
 pub fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
-    if envelope.envelope_version == vertrule_schemas::SchemaVersion::V1 {
+    let v = envelope.envelope_version;
+    if v == vertrule_schemas::SchemaVersion::V1 || v == vertrule_schemas::SchemaVersion::V2 {
         Ok(())
     } else {
         Err(VerifyError::UnsupportedVersion {
-            version: envelope.envelope_version.get(),
+            version: v.get(),
         })
     }
 }
@@ -61,19 +60,22 @@ pub fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), VerifyE
 /// Returns [`VerifyError::DigestAlgorithmMismatch`] or
 /// [`VerifyError::CanonicalizationMismatch`] on mismatch.
 pub fn verify_algorithms(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
+    let expected_algo = envelope.envelope_version.digest_algorithm();
+    let expected_canon = envelope.envelope_version.canonicalization();
+
     if let Some(ref declared) = envelope.digest_algorithm {
-        if declared != DIGEST_ALGORITHM {
+        if declared != expected_algo {
             return Err(VerifyError::DigestAlgorithmMismatch {
                 declared: declared.clone(),
-                expected: DIGEST_ALGORITHM.to_string(),
+                expected: expected_algo.to_string(),
             });
         }
     }
     if let Some(ref declared) = envelope.canonicalization {
-        if declared != CANONICALIZATION {
+        if declared != expected_canon {
             return Err(VerifyError::CanonicalizationMismatch {
                 declared: declared.clone(),
-                expected: CANONICALIZATION.to_string(),
+                expected: expected_canon.to_string(),
             });
         }
     }

@@ -10,7 +10,7 @@
       "value": 42
     },
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "Governance",
+    "receipt_type": "governance",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "description": "Single valid envelope with correct event_hash (BLAKE3 of JCS-canonical payload).",

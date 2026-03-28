@@ -12,7 +12,7 @@
       "value": 99
     },
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "Governance",
+    "receipt_type": "governance",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "description": "Valid envelope with explicit digest_algorithm and canonicalization fields matching v1 identity triple.",

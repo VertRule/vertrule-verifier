@@ -2,7 +2,7 @@
 //!
 //! Mirrors the SP-ID report schema. Serializable to JCS-canonical JSON.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use vertrule_schemas::DigestBytes;
 
@@ -10,7 +10,7 @@ use crate::error::VerifyError;
 use crate::schema_profile::PROFILE_VERSION;
 
 /// Top-level verification result.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResult {
     /// Overall status.
     pub status: VerificationStatus,
@@ -27,6 +27,9 @@ pub struct VerificationResult {
     /// Policy consistency across chain (present only for chain verification).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub policy_consistency: Option<PolicyConsistency>,
+    /// Schema consistency across chain (present only for chain verification).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema_consistency: Option<SchemaConsistency>,
     /// Signature validation (present when signature bundle provided).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature_validation: Option<SignatureValidation>,
@@ -35,19 +38,17 @@ pub struct VerificationResult {
 }
 
 /// Verification status.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum VerificationStatus {
     /// All checks passed (including signature if provided).
     Valid,
     /// One or more checks failed.
     Invalid,
-    /// All structural checks passed but no signature was provided.
-    Unsigned,
 }
 
 /// Digest-level validation results.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DigestValidation {
     /// All `event_hash` values match their recomputed digests.
     pub all_hashes_match: bool,
@@ -58,7 +59,7 @@ pub struct DigestValidation {
 }
 
 /// Chain-level validation metadata.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChainValidation {
     /// Number of envelopes in the chain.
     pub length: usize,
@@ -69,14 +70,14 @@ pub struct ChainValidation {
 }
 
 /// Context digest consistency across a chain.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextConsistency {
     /// All envelopes share the same `context_digest`.
     pub uniform_context: bool,
 }
 
 /// Policy digest consistency across a chain.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyConsistency {
     /// All envelopes share the same `policy_digest`.
     pub stable_policy: bool,
@@ -84,8 +85,15 @@ pub struct PolicyConsistency {
     pub transitions_detected: bool,
 }
 
+/// Schema digest consistency across a chain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchemaConsistency {
+    /// All envelopes share the same `schema_digest`.
+    pub uniform_schema: bool,
+}
+
 /// Signature validation results.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignatureValidation {
     /// Whether a signature bundle was provided.
     pub present: bool,
@@ -116,22 +124,10 @@ impl VerificationResult {
             chain_validation: None,
             context_consistency: None,
             policy_consistency: None,
+            schema_consistency: None,
             signature_validation: None,
             errors: Vec::new(),
         }
-    }
-
-    /// Create a new unsigned result for a single receipt (structurally valid, no signature).
-    #[must_use]
-    pub fn unsigned_single() -> Self {
-        let mut result = Self::valid_single();
-        result.status = VerificationStatus::Unsigned;
-        result.signature_validation = Some(SignatureValidation {
-            present: false,
-            valid: false,
-            key_id_consistent: false,
-        });
-        result
     }
 
     /// Create an invalid result with the given error.
@@ -148,6 +144,7 @@ impl VerificationResult {
             chain_validation: None,
             context_consistency: None,
             policy_consistency: None,
+            schema_consistency: None,
             signature_validation: None,
             errors: vec![error],
         }
@@ -166,8 +163,8 @@ impl VerificationResult {
     /// Returns error if canonicalization fails.
     pub fn digest(&self) -> Result<DigestBytes, VerifyError> {
         let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
-        let canon_bytes =
-            vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&value)
+            .map_err(|e| VerifyError::Canon(format!("{e}")))?;
         let hash = blake3::hash(&canon_bytes);
         Ok(DigestBytes::from_array(*hash.as_bytes()))
     }

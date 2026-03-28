@@ -11,7 +11,7 @@
       "value": 1
     },
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "Governance",
+    "receipt_type": "governance",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "description": "Envelope declaring canonicalization 'CBOR' which does not match v1 identity triple. Verifier must reject.",

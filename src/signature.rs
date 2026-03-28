@@ -110,6 +110,7 @@ impl<'de> Deserialize<'de> for KeyId {
 /// Mirrors `SignatureData` from `vertrule-crypto` plus the `timestamp` field
 /// needed to reconstruct the canonical signed message.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SignatureBundle {
     /// Signature algorithm (must be `"Ed25519"`).
     pub alg: String,
@@ -134,14 +135,32 @@ pub struct SignatureBundle {
 
 /// Compute the domain-separated receipt digest.
 ///
-/// `receipt_digest` = `BLAKE3(b"VR-ReceiptDigest|v1|" || JCS(payload))`
+/// - **V1**: `BLAKE3(prefix || JCS(payload))`
+/// - **V2**: `BLAKE3(prefix || JCS(envelope \ {event_hash}))`
+///
+/// For V2, the digest covers all trust-bearing fields, matching the
+/// commitment scope of `event_hash`.
 ///
 /// # Errors
 ///
 /// Returns error if JCS canonicalization fails.
-pub fn compute_receipt_digest(payload: &serde_json::Value) -> Result<DigestBytes, VerifyError> {
-    let canon_bytes =
-        vertrule_schemas::jcs::to_canon_bytes(payload).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+pub fn compute_receipt_digest(
+    envelope: &vertrule_schemas::ReceiptEnvelope,
+) -> Result<DigestBytes, VerifyError> {
+    let canon_bytes = if envelope.envelope_version.commits_full_envelope() {
+        // V2: hash the full envelope minus event_hash
+        let mut value = serde_json::to_value(envelope)
+            .map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        if let serde_json::Value::Object(ref mut map) = value {
+            map.remove("event_hash");
+        }
+        vertrule_schemas::jcs::to_canon_bytes(&value)
+            .map_err(|e| VerifyError::Canon(format!("{e}")))?
+    } else {
+        // V1: hash payload only
+        vertrule_schemas::jcs::to_canon_bytes(envelope.payload.as_value())
+            .map_err(|e| VerifyError::Canon(format!("{e}")))?
+    };
 
     let mut hasher = blake3::Hasher::new();
     hasher.update(RECEIPT_PREFIX);
@@ -166,7 +185,7 @@ pub fn compute_receipt_digest(payload: &serde_json::Value) -> Result<DigestBytes
 /// Returns [`VerifyError::SignatureDataMalformed`] for structural issues,
 /// [`VerifyError::SignatureInvalid`] for verification failure.
 pub fn verify_signature(
-    payload: &serde_json::Value,
+    envelope: &vertrule_schemas::ReceiptEnvelope,
     bundle: &SignatureBundle,
 ) -> Result<(), VerifyError> {
     // 1. Validate metadata fields
@@ -178,8 +197,8 @@ pub fn verify_signature(
     // 3. Verify key ID
     validate_key_id_matches(&verifying_key, &bundle.key_id)?;
 
-    // 4. Compute receipt digest
-    let receipt_digest = compute_receipt_digest(payload)?;
+    // 4. Compute receipt digest (version-aware: V1=payload, V2=full envelope)
+    let receipt_digest = compute_receipt_digest(envelope)?;
 
     // 5. Construct canonical message
     let canonical_message = construct_canonical_message(&receipt_digest, &bundle.timestamp);

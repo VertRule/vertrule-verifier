@@ -11,10 +11,11 @@ use crate::chain::check_chain_detail;
 use crate::envelope::{
     verify_algorithms, verify_envelope_version, verify_event_hash, ReceiptEnvelope,
 };
-use crate::ingestion::{ingest_chain, ingest_envelope};
+use crate::ingestion::{ingest_chain, ingest_chain_with_limits, ingest_envelope, ingest_envelope_with_limits};
+use crate::limits::VerifierLimits;
 use crate::result::{
-    ChainValidation, ContextConsistency, DigestValidation, PolicyConsistency, SignatureValidation,
-    VerificationResult,
+    ChainValidation, ContextConsistency, DigestValidation, PolicyConsistency, SchemaConsistency,
+    SignatureValidation, VerificationResult,
 };
 use crate::signature::{verify_signature, SignatureBundle};
 
@@ -25,6 +26,32 @@ use crate::signature::{verify_signature, SignatureBundle};
 #[must_use]
 pub fn verify_receipt(raw_bytes: &[u8]) -> VerificationResult {
     let envelope = match ingest_envelope(raw_bytes) {
+        Ok(pair) => pair,
+        Err(e) => return VerificationResult::invalid(e.to_string()),
+    };
+
+    let mut result = VerificationResult::valid_single();
+
+    if let Err(e) = verify_envelope_version(&envelope) {
+        result.add_error(e.to_string());
+    }
+
+    if let Err(e) = verify_algorithms(&envelope) {
+        result.add_error(e.to_string());
+    }
+
+    if let Err(e) = verify_event_hash(&envelope) {
+        result.digest_validation.all_hashes_match = false;
+        result.add_error(e.to_string());
+    }
+
+    result
+}
+
+/// Verify a single receipt envelope with configurable limits.
+#[must_use]
+pub fn verify_receipt_with_limits(raw_bytes: &[u8], limits: &VerifierLimits) -> VerificationResult {
+    let envelope = match ingest_envelope_with_limits(raw_bytes, limits) {
         Ok(pair) => pair,
         Err(e) => return VerificationResult::invalid(e.to_string()),
     };
@@ -60,7 +87,13 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
     };
 
     if envelopes.is_empty() {
-        return VerificationResult::valid_single();
+        let mut result = VerificationResult::valid_single();
+        result.chain_validation = Some(ChainValidation {
+            length: 0,
+            first_logical_time: 0,
+            last_logical_time: 0,
+        });
+        return result;
     }
 
     let mut result = VerificationResult::valid_single();
@@ -86,8 +119,8 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
 
     result.chain_validation = Some(ChainValidation {
         length: envelopes.len(),
-        first_logical_time: first.logical_time,
-        last_logical_time: last.logical_time,
+        first_logical_time: first.logical_time.get(),
+        last_logical_time: last.logical_time.get(),
     });
 
     result.context_consistency = Some(ContextConsistency {
@@ -97,6 +130,71 @@ pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
     result.policy_consistency = Some(PolicyConsistency {
         stable_policy: detail.policy_stable,
         transitions_detected: !detail.policy_stable,
+    });
+
+    result.schema_consistency = Some(SchemaConsistency {
+        uniform_schema: detail.schema_uniform,
+    });
+
+    result
+}
+
+/// Verify a chain of receipt envelopes with configurable limits.
+#[must_use]
+pub fn verify_receipt_chain_with_limits(
+    raw_bytes: &[u8],
+    limits: &VerifierLimits,
+) -> VerificationResult {
+    let envelopes = match ingest_chain_with_limits(raw_bytes, limits) {
+        Ok(pair) => pair,
+        Err(e) => return VerificationResult::invalid(e.to_string()),
+    };
+
+    if envelopes.is_empty() {
+        let mut result = VerificationResult::valid_single();
+        result.chain_validation = Some(ChainValidation {
+            length: 0,
+            first_logical_time: 0,
+            last_logical_time: 0,
+        });
+        return result;
+    }
+
+    let mut result = VerificationResult::valid_single();
+
+    let all_hashes_match = check_per_envelope(&envelopes, &mut result);
+
+    let detail = check_chain_detail(&envelopes);
+    for e in &detail.errors {
+        result.add_error(e.to_string());
+    }
+
+    let first = &envelopes[0];
+    let last = &envelopes[envelopes.len() - 1];
+
+    result.digest_validation = DigestValidation {
+        all_hashes_match,
+        chain_integrity: detail.linkage_ok,
+        ordering_valid: detail.ordering_ok,
+    };
+
+    result.chain_validation = Some(ChainValidation {
+        length: envelopes.len(),
+        first_logical_time: first.logical_time.get(),
+        last_logical_time: last.logical_time.get(),
+    });
+
+    result.context_consistency = Some(ContextConsistency {
+        uniform_context: detail.context_uniform,
+    });
+
+    result.policy_consistency = Some(PolicyConsistency {
+        stable_policy: detail.policy_stable,
+        transitions_detected: !detail.policy_stable,
+    });
+
+    result.schema_consistency = Some(SchemaConsistency {
+        uniform_schema: detail.schema_uniform,
     });
 
     result
@@ -143,8 +241,8 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
         }
     };
 
-    // Verify signature over the payload (not the whole envelope)
-    match verify_signature(envelope.payload.as_value(), &bundle) {
+    // Verify signature (V1: over payload; V2: over full envelope)
+    match verify_signature(&envelope, &bundle) {
         Ok(()) => {
             result.signature_validation = Some(SignatureValidation {
                 present: true,

@@ -10,7 +10,7 @@
       "value": 42
     },
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "Governance",
+    "receipt_type": "governance",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "description": "Envelope with single-bit flip in event_hash first nibble. Verifier must reject.",

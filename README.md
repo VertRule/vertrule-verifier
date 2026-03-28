@@ -5,25 +5,65 @@ Standalone public verifier for VertRule receipt envelopes.
 This crate verifies receipt structure, digest integrity, chain linkage, and
 signatures without importing the private runtime crates that produce receipts.
 
-## Scope
+## What the Verifier Does
 
-`vr-verifier` is for **verification only**. It does not mint receipts, sign
-receipts, execute governed workloads, or require trust in `vertrule-runtime`.
+`vr-verifier` answers one question: **is this receipt envelope (or chain)
+structurally valid and cryptographically consistent?**
 
-## Verification Surface
+It verifies:
 
-The verifier checks:
+- **Envelope version** compatibility (only v1 supported)
+- **Schema/profile conformance** -- strict field set, known receipt types,
+  known boundary origins, unknown-field rejection
+- **JCS canonicalization** (RFC 8785) -- input must already be canonical
+- **`event_hash` integrity** -- BLAKE3 digest recomputed over canonical payload
+- **Chain parent linkage** via `parent_id` / `event_hash` binding
+- **Monotonic `logical_time`** across chain elements
+- **Context and policy consistency** -- uniform `context_digest` and
+  `policy_digest` across a chain
+- **Duplicate detection** -- no repeated `event_hash` values in a chain
+- **Ed25519 signature verification** with `VertRule-Receipt-v1` domain separation
+- **Deterministic result output** as JCS-canonical JSON with BLAKE3 result digest
 
-- Envelope version compatibility
-- Schema/profile conformance for the public envelope
-- JCS canonicalization (RFC 8785)
-- `event_hash` recomputation with BLAKE3
-- Chain parent linkage through `parent_id`
-- Monotonic `logical_time`
-- Uniform `context_digest` across a chain
-- Stable `policy_digest` across a chain
-- Ed25519 signature verification (domain-separated)
-- Deterministic result emission as canonical JSON
+## What the Verifier Does Not Do
+
+- Mint, sign, or produce receipts
+- Execute governed workloads
+- Evaluate policy semantics (it checks that `policy_digest` is consistent,
+  not that the policy is correct)
+- Validate payload contents beyond structural integrity
+- Require trust in `vertrule-runtime` or any private crate
+
+## Trust Model
+
+An external reviewer can verify a receipt bundle using only this crate and
+`vertrule-schemas`. No access to the private execution runtime is needed.
+
+The verifier depends on `vertrule-schemas` for canonical types
+(`ReceiptEnvelope`, `DigestBytes`, `SchemaVersion`, `ReceiptType`,
+`BoundaryOrigin`, `CanonicalPayload`) and JCS canonicalization. Both crates
+are public and auditable.
+
+**Dual-layer field validation**: unknown fields are rejected first by the
+schema profile validator (operating on raw JSON), then by
+`#[serde(deny_unknown_fields)]` on `ReceiptEnvelope` during typed
+deserialization. Both layers must agree.
+
+## Dependency Policy
+
+Production dependencies:
+
+| Crate | Purpose |
+|-------|---------|
+| `vertrule-schemas` | Canonical types, JCS canonicalization (RFC 8785) |
+| `blake3` | Cryptographic hashing |
+| `ed25519-dalek` | Ed25519 signature verification |
+| `serde` / `serde_json` | Deserialization |
+| `hex` | Hex encoding |
+| `base64` | Base64 encoding/decoding |
+| `thiserror` | Error derivation |
+
+The verifier must not depend on the private runtime execution stack.
 
 ## CLI
 
@@ -34,61 +74,79 @@ vr-verify receipt examples/sample_receipt.json
 # Verify a receipt chain
 vr-verify chain examples/sample_chain.json
 
+# Verify a signed receipt
+vr-verify signed receipt.json signature.json
 ```
 
-Exit codes: `0` = VALID, `1` = INVALID, `2` = ERROR.
+Exit codes: `0` = VALID, `1` = INVALID, `2` = usage error.
 
-Output: canonical JSON verification result to stdout, result digest to stderr.
+Output: JCS-canonical verification result to stdout, result digest to stderr.
 
-## Build
+## Build and Local Validation
 
 ```bash
+# Individual targets
 cargo build --release
 cargo test
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
+cargo fmt -- --check
+
+# Full local check (build + test + clippy + fmt)
+just check
+
+# Regenerate protocol test vectors
+just vectors
+
+# Full release verification sequence
+just verify-local
 ```
 
-## Examples
+### Local Release Process
 
-The `examples/` directory contains:
+This project uses a local governance model with no hosted CI. Before any
+release or merge:
 
-| File | Purpose |
-|------|---------|
-| `sample_receipt.json` | Valid single receipt envelope (governance type) |
-| `sample_chain.json` | Valid 3-envelope chain with parent linkage |
-| `tampered_receipt.json` | Receipt with flipped event_hash bit (should fail) |
+1. Run `just verify-local` -- this executes build, test, clippy, format
+   check, and vector regeneration in sequence
+2. Confirm all 77+ tests pass with zero warnings
+3. Verify test vectors are up to date (`just vectors` should produce no diff)
+4. Review that `governance-profile-v1.json` matches the code constants
+   (the `test_governance_profile_matches_constants` test enforces this)
 
-Try it:
+Multi-architecture validation is not yet automated. Cross-compilation
+targets should be tested manually when preparing releases for distribution.
 
-```bash
-# Should exit 0 with status VALID
-./target/release/vr-verify receipt examples/sample_receipt.json
+## Test Vectors
 
-# Should exit 1 with status INVALID
-./target/release/vr-verify receipt examples/tampered_receipt.json
-```
+Protocol test vectors live in `test-vectors/` and are generated by
+`examples/generate_test_vectors.rs`. Regenerate with `just vectors`.
 
-## Public Contract
+Vectors cover valid envelopes, valid chains, valid signed receipts,
+and invalid cases for: event hash mismatch, broken chain linkage, time
+regression, unsupported version, unknown fields, missing required fields,
+unknown receipt types, duplicate hashes, context/policy inconsistency,
+bit flips, invalid signatures, and algorithm mismatches.
 
-The verifier operates on the `ReceiptEnvelope` shape defined by `vertrule-schemas`:
+Raw JCS-canonical fixtures (in `test-vectors/raw/`) are used by
+facade-level integration tests that exercise the full ingestion pipeline.
 
-- `envelope_version`, `receipt_type`, `context_digest`, `schema_digest`
-- `policy_digest`, `logical_time`, `event_hash`, `parent_id`
-- `boundary_origin`, `payload`
+## Versioning
 
-Domain-specific governed receipts live inside `payload`.
+The verifier tracks `vertrule-schemas` for envelope structure. When
+`vertrule-schemas` adds new `ReceiptType` or `BoundaryOrigin` variants,
+the verifier's `KNOWN_RECEIPT_TYPES` and `KNOWN_BOUNDARY_ORIGINS` constants
+must be updated to match. Drift-guard tests enforce this at compile time.
 
-## Dependency Policy
+The `governance-profile-v1.json` file is the single source of truth for the
+v1 envelope schema. A sync test ensures the profile and code constants match.
 
-Production dependencies: `vertrule-schemas` (includes JCS canonicalization),
-`base64`, `blake3`, `ed25519-dalek`, `hex`, `serde`, `serde_json`, `thiserror`.
+## Known Limitations
 
-The verifier must not depend on the private runtime execution stack.
-
-## Trust Model
-
-An external reviewer can verify a receipt bundle without needing access to
-the private execution runtime. That is the core publication goal.
+- Only `SchemaVersion::V1` is supported (BLAKE3 + JCS)
+- No streaming verification -- entire chain must fit in memory
+- No policy evaluation -- only structural and cryptographic checks
+- Signature verification requires the public key to be supplied externally
+- No certificate chain or key revocation checking
 
 ## License
 

@@ -11,8 +11,7 @@
 //!
 //! | Crate | Purpose |
 //! |-------|---------|
-//! | `vertrule-schemas` | Canonical types (`DigestBytes`, etc.) |
-//! | `vr-jcs` | RFC 8785 JSON Canonicalization |
+//! | `vertrule-schemas` | Canonical types, JCS canonicalization (RFC 8785) |
 //! | `blake3` | Cryptographic hashing |
 //! | `serde` / `serde_json` | Deserialization |
 //! | `hex` | Hex encoding |
@@ -42,15 +41,23 @@ pub mod chain;
 pub mod envelope;
 pub mod error;
 pub mod ingestion;
+pub mod limits;
 pub mod result;
 pub mod schema_profile;
 pub mod signature;
 pub mod verify;
 
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
 pub use chain::verify_chain;
 pub use envelope::ReceiptEnvelope;
 pub use error::VerifyError;
-pub use verify::{verify_receipt, verify_receipt_chain, verify_signed_receipt};
+pub use limits::{LimitViolation, VerifierLimits};
+pub use verify::{
+    verify_receipt, verify_receipt_chain, verify_receipt_chain_with_limits,
+    verify_receipt_with_limits, verify_signed_receipt,
+};
 
 // Re-export types from vertrule-schemas for public API compatibility.
 pub use vertrule_schemas::{DigestBytes, SchemaVersion};

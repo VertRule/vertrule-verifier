@@ -1,7 +1,7 @@
 //! Tests for the verification facade.
 
-use crate::test_support::vr_test;
 use crate::result::VerificationStatus;
+use crate::test_support::vr_test;
 
 /// Build a single envelope JSON value with correct `event_hash`.
 /// Returns `(value, event_hash_hex)`.
@@ -46,7 +46,8 @@ fn build_single_bytes(
     payload: serde_json::Value,
 ) -> Result<Vec<u8>, anyhow::Error> {
     let (value, _hash) = build_envelope_value(logical_time, None, payload)?;
-    vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
+    vertrule_schemas::jcs::to_canon_bytes(&value)
+        .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 /// Build a valid chain of `count` envelopes as a JSON array byte vector.
@@ -63,7 +64,8 @@ fn build_valid_chain_bytes(count: usize) -> Result<Vec<u8>, anyhow::Error> {
     }
 
     let array = serde_json::Value::Array(elements);
-    vertrule_schemas::jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
+    vertrule_schemas::jcs::to_canon_bytes(&array)
+        .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 vr_test!(
@@ -106,8 +108,8 @@ vr_test!(
             serde_json::json!("b".repeat(64)),
         );
         let value = serde_json::Value::Object(obj);
-        let bytes =
-            vertrule_schemas::jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = vertrule_schemas::jcs::to_canon_bytes(&value)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -155,8 +157,8 @@ vr_test!(
             build_envelope_value(1001, Some(&"f".repeat(64)), serde_json::json!({"index": 1}))?;
 
         let array = serde_json::Value::Array(vec![env0, env1]);
-        let bytes =
-            vertrule_schemas::jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = vertrule_schemas::jcs::to_canon_bytes(&array)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -172,8 +174,8 @@ vr_test!(
             build_envelope_value(1000, Some(&hash0), serde_json::json!({"index": 1}))?;
 
         let array = serde_json::Value::Array(vec![env0, env1]);
-        let bytes =
-            vertrule_schemas::jcs::to_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = vertrule_schemas::jcs::to_canon_bytes(&array)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -185,6 +187,36 @@ vr_test!(
     fn test_verify_empty_chain() {
         let result = super::verify_receipt_chain(b"[]");
         assert_eq!(result.status, VerificationStatus::Valid);
+
+        let chain = result
+            .chain_validation
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("empty chain should have chain_validation"))?;
+        assert_eq!(chain.length, 0);
+    }
+);
+
+vr_test!(
+    fn test_verify_chain_schema_inconsistent() {
+        let (env0, hash0) = build_envelope_value(1000, None, serde_json::json!({"index": 0}))?;
+        let (mut env1_val, _hash1) =
+            build_envelope_value(1001, Some(&hash0), serde_json::json!({"index": 1}))?;
+
+        // Tamper schema_digest in second envelope
+        env1_val["schema_digest"] = serde_json::json!("f".repeat(64));
+
+        let array = serde_json::Value::Array(vec![env0, env1_val]);
+        let bytes = vertrule_schemas::jcs::to_canon_bytes(&array)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+
+        let result = super::verify_receipt_chain(&bytes);
+        assert_eq!(result.status, VerificationStatus::Invalid);
+
+        let sc = result
+            .schema_consistency
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("missing schema_consistency"))?;
+        assert!(!sc.uniform_schema);
     }
 );
 

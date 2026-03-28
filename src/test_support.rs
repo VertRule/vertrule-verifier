@@ -1,20 +1,13 @@
 //! Test helpers replacing `vr-kernel-testutils`.
 
-/// Replacement for `vr_test!` — wraps body in `anyhow::Result` block.
+/// Test macro — returns `Result`, no panics.
 macro_rules! vr_test {
     ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
         $(#[$meta])*
         #[test]
-        fn $name() {
-            #[allow(clippy::redundant_closure_call)]
-            let res: anyhow::Result<()> = (|| {
-                $body
-                Ok(())
-            })();
-
-            if let Err(e) = res {
-                panic!("{e}");
-            }
+        fn $name() -> anyhow::Result<()> {
+            $body
+            Ok(())
         }
     };
 }
@@ -28,5 +21,9 @@ pub(crate) fn need<T>(option: Option<T>, what: &'static str) -> anyhow::Result<T
 
 /// Replacement for `ok_when()` — returns `Some(())` if condition is true, `None` otherwise.
 pub(crate) const fn ok_when(condition: bool) -> Option<()> {
-    if condition { Some(()) } else { None }
+    if condition {
+        Some(())
+    } else {
+        None
+    }
 }

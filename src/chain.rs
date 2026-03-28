@@ -7,7 +7,8 @@
 //! 3. `logical_time` is strictly increasing across consecutive envelopes.
 //! 4. All envelopes share the same `context_digest`.
 //! 5. All envelopes share the same `policy_digest`.
-//! 6. No duplicate `event_hash` values.
+//! 6. All envelopes share the same `schema_digest`.
+//! 7. No duplicate `event_hash` values.
 
 use std::collections::BTreeSet;
 
@@ -28,6 +29,8 @@ pub(crate) struct ChainDetail {
     pub context_uniform: bool,
     /// All `policy_digest` values match the first.
     pub policy_stable: bool,
+    /// All `schema_digest` values match the first.
+    pub schema_uniform: bool,
     /// All errors found across all checks.
     pub errors: Vec<VerifyError>,
 }
@@ -42,6 +45,7 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
     let mut ordering_ok = true;
     let mut context_uniform = true;
     let mut policy_stable = true;
+    let mut schema_uniform = true;
 
     if envelopes.is_empty() {
         return ChainDetail {
@@ -49,6 +53,7 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
             ordering_ok,
             context_uniform,
             policy_stable,
+            schema_uniform,
             errors,
         };
     }
@@ -91,6 +96,19 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
         }
     }
 
+    // Schema consistency: all must match first envelope.
+    let expected_schema = &first.schema_digest;
+    for (i, env) in envelopes.iter().enumerate().skip(1) {
+        if env.schema_digest != *expected_schema {
+            errors.push(VerifyError::SchemaInconsistent {
+                index: i,
+                expected: *expected_schema,
+                found: env.schema_digest,
+            });
+            schema_uniform = false;
+        }
+    }
+
     // Per-pair checks + duplicate detection.
     let mut seen_hashes = BTreeSet::new();
     seen_hashes.insert(first.event_hash);
@@ -123,8 +141,8 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
         if curr.logical_time <= prev.logical_time {
             errors.push(VerifyError::LogicalTimeNotMonotonic {
                 index: i,
-                previous: prev.logical_time,
-                current: curr.logical_time,
+                previous: prev.logical_time.get(),
+                current: curr.logical_time.get(),
             });
             ordering_ok = false;
         }
@@ -135,6 +153,7 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
         ordering_ok,
         context_uniform,
         policy_stable,
+        schema_uniform,
         errors,
     }
 }
@@ -147,6 +166,7 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
 /// - First envelope has no parent
 /// - Context digest consistency (all match first)
 /// - Policy digest consistency (all match first)
+/// - Schema digest consistency (all match first)
 /// - Per-pair: parent linkage, logical time monotonicity, duplicate detection
 ///
 /// # Errors

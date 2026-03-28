@@ -9,7 +9,7 @@
         "step": 0
       },
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "Event",
+      "receipt_type": "event",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
     {
@@ -22,7 +22,7 @@
         "step": 1
       },
       "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      "receipt_type": "Event",
+      "receipt_type": "event",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     }
   ],

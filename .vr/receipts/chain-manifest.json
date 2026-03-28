@@ -1,0 +1,12 @@
+{
+  "schema": "vr.governance.receipt-chain.manifest/v1",
+  "repo_id": "vertrule-verifier",
+  "chain_status": "empty",
+  "receipt_count": 0,
+  "schema_classes": [],
+  "chain_root": null,
+  "latest_receipt_id": null,
+  "parent_linkage_complete": false,
+  "sequence_ref_present": false,
+  "subject_consistent": true
+}

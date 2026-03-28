@@ -3,10 +3,10 @@
     {
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "e6e09b1aad4c0e4cbccbf714c82e685c7158ea36b66272571cb348cdb4b4c05e",
+      "event_hash": "f594fd086c244db68bbaaaa260a520d010e66fa3b72ae911d254a63a253bef8e",
       "logical_time": 100,
       "payload": {
-        "action": "duplicate"
+        "step": 0
       },
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "receipt_type": "event",
@@ -15,18 +15,18 @@
     {
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "e6e09b1aad4c0e4cbccbf714c82e685c7158ea36b66272571cb348cdb4b4c05e",
+      "event_hash": "cfe4671d6908665fe25cd1f740a85b798832aa49b7f4e08847ec40b20d5256d1",
       "logical_time": 200,
-      "parent_id": "e6e09b1aad4c0e4cbccbf714c82e685c7158ea36b66272571cb348cdb4b4c05e",
+      "parent_id": "f594fd086c244db68bbaaaa260a520d010e66fa3b72ae911d254a63a253bef8e",
       "payload": {
-        "action": "duplicate"
+        "step": 1
       },
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "receipt_type": "event",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "schema_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     }
   ],
-  "description": "Chain with duplicate event_hash (same payload in both envelopes). Verifier must reject.",
-  "expected_error": "DuplicateEventHash",
+  "description": "Chain where schema_digest differs between envelopes. Verifier must reject.",
+  "expected_error": "SchemaInconsistent",
   "expected_result": "fail"
 }

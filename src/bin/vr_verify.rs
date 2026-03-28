@@ -149,6 +149,6 @@ fn emit_result(result: &vr_verifier::result::VerificationResult) -> ExitCode {
 
     match result.status {
         VerificationStatus::Valid => ExitCode::SUCCESS,
-        VerificationStatus::Invalid | VerificationStatus::Unsigned => ExitCode::from(1),
+        VerificationStatus::Invalid => ExitCode::from(1),
     }
 }

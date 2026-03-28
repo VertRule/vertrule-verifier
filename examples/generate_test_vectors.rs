@@ -343,7 +343,8 @@ fn gen_invalid_version(dir: &std::path::Path) -> Result<(), Box<dyn std::error::
         "data": envelope
     });
 
-    write_vector(dir, "invalid_version", &vector)
+    write_vector(dir, "invalid_version", &vector)?;
+    write_raw(dir, "invalid_version", &envelope)
 }
 
 fn gen_invalid_unknown_field(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -358,7 +359,8 @@ fn gen_invalid_unknown_field(dir: &std::path::Path) -> Result<(), Box<dyn std::e
         "data": envelope
     });
 
-    write_vector(dir, "invalid_unknown_field", &vector)
+    write_vector(dir, "invalid_unknown_field", &vector)?;
+    write_raw(dir, "invalid_unknown_field", &envelope)
 }
 
 fn gen_invalid_missing_required(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -375,7 +377,8 @@ fn gen_invalid_missing_required(dir: &std::path::Path) -> Result<(), Box<dyn std
         "data": envelope
     });
 
-    write_vector(dir, "invalid_missing_required", &vector)
+    write_vector(dir, "invalid_missing_required", &vector)?;
+    write_raw(dir, "invalid_missing_required", &envelope)
 }
 
 fn gen_invalid_unknown_receipt_type(
@@ -392,7 +395,8 @@ fn gen_invalid_unknown_receipt_type(
         "data": envelope
     });
 
-    write_vector(dir, "invalid_unknown_receipt_type", &vector)
+    write_vector(dir, "invalid_unknown_receipt_type", &vector)?;
+    write_raw(dir, "invalid_unknown_receipt_type", &envelope)
 }
 
 fn gen_invalid_duplicate_hash(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -558,6 +562,38 @@ fn gen_invalid_wrong_canonicalization(
     write_vector(dir, "invalid_wrong_canonicalization", &vector)
 }
 
+fn gen_invalid_schema_inconsistent(
+    dir: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let payload_0 = json!({"step": 0});
+    let env_0 = build_envelope(&payload_0, 100, None, "Event")?;
+    let hash_0 = get_hash(&env_0)?;
+
+    let payload_1 = json!({"step": 1});
+    // Same context and policy, but different schema_digest
+    let event_hash_1 = canon_hash(&payload_1)?;
+    let env_1 = json!({
+        "envelope_version": 1,
+        "receipt_type": "Event",
+        "context_digest": placeholder_hex_64(0xaa),
+        "schema_digest": placeholder_hex_64(0xdd),
+        "policy_digest": placeholder_hex_64(0xcc),
+        "logical_time": 200,
+        "event_hash": event_hash_1,
+        "parent_id": hash_0,
+        "payload": payload_1,
+    });
+
+    let vector = json!({
+        "description": "Chain where schema_digest differs between envelopes. Verifier must reject.",
+        "expected_result": "fail",
+        "expected_error": "SchemaInconsistent",
+        "data": [env_0, env_1]
+    });
+
+    write_vector(dir, "invalid_schema_inconsistent", &vector)
+}
+
 fn gen_invalid_signature(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     let seed: [u8; 32] = [42u8; 32];
     let sk = SigningKey::from_bytes(&seed);
@@ -647,7 +683,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_invalid_signature(&dir)?;
     gen_invalid_wrong_digest_algorithm(&dir)?;
     gen_invalid_wrong_canonicalization(&dir)?;
+    gen_invalid_schema_inconsistent(&dir)?;
 
-    eprintln!("Done. 18 vectors generated.");
+    eprintln!("Done. 19 vectors generated.");
     Ok(())
 }

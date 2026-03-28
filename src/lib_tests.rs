@@ -6,10 +6,10 @@ use serde_json::json;
 
 use crate::chain::verify_chain;
 use crate::envelope::{verify_envelope_version, verify_event_hash, ReceiptEnvelope};
-use vertrule_schemas::CanonicalPayload;
 use crate::error::VerifyError;
 use crate::test_support::{need, ok_when, vr_test};
-use vertrule_schemas::{DigestBytes, ReceiptType, SchemaVersion};
+use vertrule_schemas::CanonicalPayload;
+use vertrule_schemas::{DigestBytes, IJsonUInt, ReceiptType, SchemaVersion};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,7 +17,8 @@ use vertrule_schemas::{DigestBytes, ReceiptType, SchemaVersion};
 
 /// Compute a BLAKE3 digest over the JCS-canonical form of a `serde_json::Value`.
 fn canon_hash(value: &serde_json::Value) -> Result<DigestBytes, VerifyError> {
-    let bytes = vertrule_schemas::jcs::to_canon_bytes(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let bytes = vertrule_schemas::jcs::to_canon_bytes(value)
+        .map_err(|e| VerifyError::Canon(format!("{e}")))?;
     let hash = blake3::hash(&bytes);
     Ok(DigestBytes::from_array(*hash.as_bytes()))
 }
@@ -30,15 +31,15 @@ fn make_envelope(
 ) -> anyhow::Result<ReceiptEnvelope> {
     let event_hash = canon_hash(&payload)?;
     let filler = DigestBytes::from_array([0u8; 32]);
-    let canonical = CanonicalPayload::new(payload)
-        .map_err(|e| anyhow::anyhow!(e))?;
+    let canonical = CanonicalPayload::new(payload).map_err(|e| anyhow::anyhow!(e))?;
+    let lt = IJsonUInt::new(logical_time).map_err(|e| anyhow::anyhow!(e))?;
     Ok(ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
         receipt_type: ReceiptType::Governance,
         context_digest: filler,
         schema_digest: filler,
         policy_digest: filler,
-        logical_time,
+        logical_time: lt,
         event_hash,
         parent_id,
         boundary_origin: None,
@@ -76,16 +77,12 @@ vr_test!(
 );
 
 vr_test!(
-    fn wrong_version_rejected() {
-        let mut env = make_envelope(json!({"x": 1}), 1, None)?;
-        env.envelope_version = SchemaVersion::new(99);
-
+    fn wrong_version_rejected_at_construction() {
+        // `SchemaVersion::new` rejects unsupported versions at the type level,
+        // so invalid versions can never reach the verifier.
         need(
-            ok_when(matches!(
-                verify_envelope_version(&env),
-                Err(VerifyError::UnsupportedVersion { version: 99 })
-            )),
-            "version 99 should produce UnsupportedVersion",
+            ok_when(SchemaVersion::new(99).is_err()),
+            "version 99 should be rejected at construction",
         )?;
     }
 );
@@ -187,6 +184,22 @@ vr_test!(
                 Err(VerifyError::ChainLinkageBroken { index: 0, .. })
             )),
             "first envelope with parent should produce ChainLinkageBroken at index 0",
+        )?;
+    }
+);
+
+vr_test!(
+    fn schema_digest_inconsistency_detected() {
+        let e0 = make_envelope(json!({"step": 0}), 1, None)?;
+        let mut e1 = make_envelope(json!({"step": 1}), 2, Some(e0.event_hash))?;
+        e1.schema_digest = DigestBytes::from_array([0xffu8; 32]);
+
+        need(
+            ok_when(matches!(
+                verify_chain(&[e0, e1]),
+                Err(VerifyError::SchemaInconsistent { index: 1, .. })
+            )),
+            "different schema_digest should produce SchemaInconsistent at index 1",
         )?;
     }
 );

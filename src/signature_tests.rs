@@ -1,11 +1,13 @@
 //! Tests for Ed25519 signature verification.
 
+use crate::test_support::vr_test;
 use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey};
-use crate::test_support::vr_test;
 
 use super::*;
-use vertrule_schemas::DigestBytes;
+use vertrule_schemas::{
+    CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope, ReceiptType, SchemaVersion,
+};
 
 /// Create a deterministic test signing key (no RNG).
 fn test_signing_key() -> SigningKey {
@@ -13,27 +15,55 @@ fn test_signing_key() -> SigningKey {
     SigningKey::from_bytes(&seed)
 }
 
-/// Compute `key_id` from a verifying key (mirrors `ed25519::key_id` in `vertrule-crypto`).
+/// Compute `key_id` from a verifying key.
 fn compute_key_id(key: &ed25519_dalek::VerifyingKey) -> String {
     let hash = blake3::hash(key.as_bytes());
     hex::encode(&hash.as_bytes()[..12])
 }
 
-/// Sign a payload and return a complete `SignatureBundle` JSON value.
-fn sign_payload(
-    payload: &serde_json::Value,
+fn zero_digest() -> DigestBytes {
+    DigestBytes::from_array([0u8; 32])
+}
+
+/// Build a V1 test envelope from a payload JSON value.
+fn make_v1_test_envelope(
+    payload_json: serde_json::Value,
+) -> Result<ReceiptEnvelope, anyhow::Error> {
+    let payload = CanonicalPayload::new(payload_json)
+        .map_err(|e| anyhow::anyhow!("payload: {e}"))?;
+    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(payload.as_value())
+        .map_err(|e| anyhow::anyhow!("canon: {e}"))?;
+    let event_hash = DigestBytes::from_array(*blake3::hash(&canon_bytes).as_bytes());
+    let logical_time = IJsonUInt::new(1)
+        .map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
+
+    Ok(ReceiptEnvelope {
+        envelope_version: SchemaVersion::V1,
+        receipt_type: ReceiptType::Event,
+        context_digest: zero_digest(),
+        schema_digest: zero_digest(),
+        policy_digest: zero_digest(),
+        logical_time,
+        event_hash,
+        parent_id: None,
+        boundary_origin: None,
+        digest_algorithm: None,
+        canonicalization: None,
+        payload,
+    })
+}
+
+/// Sign an envelope and return a complete `SignatureBundle` JSON value.
+fn sign_envelope(
+    envelope: &ReceiptEnvelope,
     timestamp: &str,
 ) -> Result<serde_json::Value, anyhow::Error> {
     let sk = test_signing_key();
     let pk = sk.verifying_key();
 
-    // Compute domain-separated receipt digest
-    let receipt_digest = compute_receipt_digest(payload)?;
-
-    // Construct canonical message
+    let receipt_digest = compute_receipt_digest(envelope)
+        .map_err(|e| anyhow::anyhow!("digest: {e}"))?;
     let canonical_message = construct_canonical_message(&receipt_digest, timestamp);
-
-    // Sign
     let sig = sk.sign(&canonical_message);
 
     let bundle = serde_json::json!({
@@ -51,27 +81,33 @@ fn sign_payload(
 
 vr_test!(
     fn test_valid_signature_verifies() {
-        let payload = serde_json::json!({"action": "governance_change", "version": 1});
+        let envelope = make_v1_test_envelope(
+            serde_json::json!({"action": "governance_change", "version": 1}),
+        )?;
         let timestamp = "2026-02-23T12:00:00Z";
-        let bundle_json = sign_payload(&payload, timestamp)?;
+        let bundle_json = sign_envelope(&envelope, timestamp)?;
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
 
-        verify_signature(&payload, &bundle)
+        verify_signature(&envelope, &bundle)
             .map_err(|e| anyhow::anyhow!("verification should pass: {e}"))?;
     }
 );
 
 vr_test!(
     fn test_tampered_payload_fails() {
-        let payload = serde_json::json!({"action": "governance_change", "version": 1});
+        let envelope = make_v1_test_envelope(
+            serde_json::json!({"action": "governance_change", "version": 1}),
+        )?;
         let timestamp = "2026-02-23T12:00:00Z";
-        let bundle_json = sign_payload(&payload, timestamp)?;
+        let bundle_json = sign_envelope(&envelope, timestamp)?;
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
 
-        // Tamper with the payload
-        let tampered = serde_json::json!({"action": "governance_change", "version": 2});
+        // Create a different envelope (tampered payload)
+        let tampered = make_v1_test_envelope(
+            serde_json::json!({"action": "governance_change", "version": 2}),
+        )?;
         let result = verify_signature(&tampered, &bundle);
         match result {
             Err(VerifyError::SignatureInvalid { .. }) => {}
@@ -93,8 +129,8 @@ vr_test!(
         });
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
-        let payload = serde_json::json!({});
-        let result = verify_signature(&payload, &bundle);
+        let envelope = make_v1_test_envelope(serde_json::json!({}))?;
+        let result = verify_signature(&envelope, &bundle);
         match result {
             Err(VerifyError::SignatureDataMalformed { reason }) => {
                 assert!(reason.contains("unsupported algorithm"));
@@ -106,16 +142,16 @@ vr_test!(
 
 vr_test!(
     fn test_wrong_key_id_rejected() {
-        let payload = serde_json::json!({"action": "test"});
+        let envelope = make_v1_test_envelope(serde_json::json!({"action": "test"}))?;
         let timestamp = "2026-02-23T12:00:00Z";
-        let mut bundle_json = sign_payload(&payload, timestamp)?;
+        let mut bundle_json = sign_envelope(&envelope, timestamp)?;
 
         // Replace key_id with a wrong value
         bundle_json["key_id"] = serde_json::json!("b".repeat(24));
 
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
-        let result = verify_signature(&payload, &bundle);
+        let result = verify_signature(&envelope, &bundle);
         match result {
             Err(VerifyError::SignatureInvalid { reason }) => {
                 assert!(reason.contains("key_id mismatch"));
@@ -129,13 +165,13 @@ vr_test!(
 
 vr_test!(
     fn test_receipt_digest_has_domain_separation() {
-        let payload = serde_json::json!({"key": "value"});
+        let envelope = make_v1_test_envelope(serde_json::json!({"key": "value"}))?;
 
         // Compute domain-separated digest (with prefix)
-        let receipt_digest = compute_receipt_digest(&payload)?;
+        let receipt_digest = compute_receipt_digest(&envelope)?;
 
         // Compute plain BLAKE3 (no prefix) — what event_hash uses
-        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&payload)
+        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(envelope.payload.as_value())
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
         let plain_hash = blake3::hash(&canon_bytes);
         let plain_digest = DigestBytes::from_array(*plain_hash.as_bytes());
@@ -147,9 +183,9 @@ vr_test!(
 
 vr_test!(
     fn test_receipt_digest_is_deterministic() {
-        let payload = serde_json::json!({"key": "value"});
-        let d1 = compute_receipt_digest(&payload)?;
-        let d2 = compute_receipt_digest(&payload)?;
+        let envelope = make_v1_test_envelope(serde_json::json!({"key": "value"}))?;
+        let d1 = compute_receipt_digest(&envelope)?;
+        let d2 = compute_receipt_digest(&envelope)?;
         assert_eq!(d1, d2);
     }
 );
@@ -167,8 +203,8 @@ vr_test!(
         });
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
-        let payload = serde_json::json!({});
-        let result = verify_signature(&payload, &bundle);
+        let envelope = make_v1_test_envelope(serde_json::json!({}))?;
+        let result = verify_signature(&envelope, &bundle);
         match result {
             Err(VerifyError::SignatureDataMalformed { .. }) => {}
             other => anyhow::bail!("expected SignatureDataMalformed, got: {other:?}"),

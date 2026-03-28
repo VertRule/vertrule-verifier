@@ -110,6 +110,17 @@ pub enum VerifyError {
         found: DigestBytes,
     },
 
+    /// `schema_digest` is not consistent across chain.
+    #[error("schema_digest inconsistency at index {index}: expected {expected}, found {found}")]
+    SchemaInconsistent {
+        /// Index of the inconsistent envelope.
+        index: usize,
+        /// The expected `schema_digest` (from first envelope).
+        expected: DigestBytes,
+        /// The actual `schema_digest` found.
+        found: DigestBytes,
+    },
+
     /// A float value was found in a structural field.
     #[error("float value in structural field \"{field}\"")]
     FloatInStructuralField {
@@ -162,4 +173,8 @@ pub enum VerifyError {
         /// What is wrong with the signature data.
         reason: String,
     },
+
+    /// A configurable resource limit was exceeded.
+    #[error("limit exceeded: {0}")]
+    LimitExceeded(#[from] crate::limits::LimitViolation),
 }
