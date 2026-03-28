@@ -45,6 +45,7 @@ pub mod limits;
 pub mod result;
 pub mod schema_profile;
 pub mod signature;
+pub mod trust;
 pub mod verify;
 
 #[cfg(feature = "wasm")]
@@ -54,9 +55,10 @@ pub use chain::verify_chain;
 pub use envelope::ReceiptEnvelope;
 pub use error::VerifyError;
 pub use limits::{LimitViolation, VerifierLimits};
+pub use trust::{AuthorityKey, AuthoritySet, Revocation, TrustPolicy, TrustStatus, TrustValidation};
 pub use verify::{
     verify_receipt, verify_receipt_chain, verify_receipt_chain_with_limits,
-    verify_receipt_with_limits, verify_signed_receipt,
+    verify_receipt_with_limits, verify_signed_receipt, verify_signed_receipt_with_trust,
 };
 
 // Re-export types from vertrule-schemas for public API compatibility.

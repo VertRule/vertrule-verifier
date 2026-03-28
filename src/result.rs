@@ -33,6 +33,9 @@ pub struct VerificationResult {
     /// Signature validation (present when signature bundle provided).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature_validation: Option<SignatureValidation>,
+    /// Trust validation (present when authority set provided).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trust_validation: Option<crate::trust::TrustValidation>,
     /// Error messages (empty when valid).
     pub errors: Vec<String>,
 }
@@ -126,6 +129,7 @@ impl VerificationResult {
             policy_consistency: None,
             schema_consistency: None,
             signature_validation: None,
+            trust_validation: None,
             errors: Vec::new(),
         }
     }
@@ -146,6 +150,7 @@ impl VerificationResult {
             policy_consistency: None,
             schema_consistency: None,
             signature_validation: None,
+            trust_validation: None,
             errors: vec![error],
         }
     }
