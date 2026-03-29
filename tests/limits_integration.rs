@@ -17,7 +17,7 @@ fn make_v1_envelope(
 ) -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload = CanonicalPayload::new(serde_json::json!({"t": logical_time}))
         .map_err(|e| anyhow::anyhow!(e))?;
-    let canon = vertrule_schemas::jcs::to_canon_bytes(payload.as_value())?;
+    let canon = vr_jcs::to_canon_bytes(payload.as_value())?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&canon).as_bytes());
 
     Ok(ReceiptEnvelope {
@@ -45,7 +45,7 @@ fn build_chain_json(length: usize) -> Result<Vec<u8>, anyhow::Error> {
         parent = Some(envelope.event_hash);
         envelopes.push(envelope);
     }
-    Ok(vertrule_schemas::jcs::to_canon_bytes(&envelopes)?)
+    Ok(vr_jcs::to_canon_bytes(&envelopes)?)
 }
 
 // ── Byte limit ─────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ fn oversized_single_envelope_rejected() -> Result<(), anyhow::Error> {
         ..VerifierLimits::default()
     };
     let envelope = make_v1_envelope(1, None)?;
-    let json = vertrule_schemas::to_canon_string(&envelope)?;
+    let json = vr_jcs::to_canon_string(&envelope)?;
     let result = vr_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert!(result.errors[0].contains("input too large"));
@@ -142,7 +142,7 @@ fn limit_error_codes_stable_in_verification_result() -> Result<(), anyhow::Error
         ..VerifierLimits::default()
     };
     let envelope = make_v1_envelope(1, None)?;
-    let json = vertrule_schemas::to_canon_string(&envelope)?;
+    let json = vr_jcs::to_canon_string(&envelope)?;
     let result = vr_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert_eq!(result.errors.len(), 1);

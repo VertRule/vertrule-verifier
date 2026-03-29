@@ -1,9 +1,10 @@
 //! # `vr-verifier` -- Public `VertRule` Receipt Verifier
 //!
-//! This crate is the standalone, auditable verifier for `VertRule` governance
-//! receipt envelopes. It intentionally carries **zero** runtime imports:
-//! it does not depend on `vertrule-core`, `vertrule-app`, `vertrule-adapters`,
-//! or any other runtime crate.
+//! This crate is the standalone, auditable verifier for `VertRule` receipt
+//! envelopes. It supports envelope versions V1 (payload-only commitment) and
+//! V2 (full-envelope commitment), both using BLAKE3 + JCS. It intentionally
+//! carries **zero** runtime imports: it does not depend on `vertrule-core`,
+//! `vertrule-app`, `vertrule-adapters`, or any other runtime crate.
 //!
 //! ## Dependencies
 //!
@@ -11,7 +12,8 @@
 //!
 //! | Crate | Purpose |
 //! |-------|---------|
-//! | `vertrule-schemas` | Canonical types, JCS canonicalization (RFC 8785) |
+//! | `vertrule-schemas` | Canonical types (constitutional nouns) |
+//! | `vr-jcs` | JCS canonicalization (RFC 8785) |
 //! | `blake3` | Cryptographic hashing |
 //! | `serde` / `serde_json` | Deserialization |
 //! | `hex` | Hex encoding |
@@ -52,7 +54,7 @@ pub mod verify;
 pub mod wasm;
 
 pub use chain::verify_chain;
-pub use envelope::ReceiptEnvelope;
+pub use envelope::{validate_receipt_envelope_integrity, ReceiptEnvelope};
 pub use error::VerifyError;
 pub use limits::{LimitViolation, VerifierLimits};
 pub use trust::{AuthorityKey, AuthoritySet, Revocation, TrustPolicy, TrustStatus, TrustValidation};

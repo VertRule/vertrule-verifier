@@ -120,7 +120,7 @@ fn run_signed(receipt_path: &str, sig_path: &str) -> ExitCode {
 fn emit_result(result: &vr_verifier::result::VerificationResult) -> ExitCode {
     // Stdout: JCS-canonical result JSON
     match serde_json::to_value(result) {
-        Ok(value) => match vertrule_schemas::jcs::to_canon_bytes(&value) {
+        Ok(value) => match vr_jcs::to_canon_bytes(&value) {
             Ok(canon_bytes) => {
                 // Write canonical bytes directly to stdout
                 if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &canon_bytes) {

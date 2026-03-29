@@ -3,9 +3,10 @@
 //! Each test creates a valid V2 envelope, tampers exactly one
 //! trust-bearing field, and asserts verification fails.
 
+use vertrule_schemas::receipts::compute_event_hash;
 use vertrule_schemas::{
-    compute_event_hash, BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope,
-    ReceiptType, SchemaVersion,
+    BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope, ReceiptType,
+    SchemaVersion,
 };
 
 const fn zero_digest() -> DigestBytes {
@@ -41,7 +42,7 @@ fn make_valid_v2_envelope() -> Result<ReceiptEnvelope, anyhow::Error> {
 fn verify_envelope(
     envelope: &ReceiptEnvelope,
 ) -> Result<vr_verifier::result::VerificationResult, anyhow::Error> {
-    let json = vertrule_schemas::to_canon_string(envelope)?;
+    let json = vr_jcs::to_canon_string(envelope)?;
     Ok(vr_verifier::verify_receipt(json.as_bytes()))
 }
 
@@ -143,7 +144,7 @@ fn v2_remove_boundary_origin_fails() -> Result<(), anyhow::Error> {
 fn v1_same_payload_different_metadata_still_passes() -> Result<(), anyhow::Error> {
     let payload =
         CanonicalPayload::new(serde_json::json!({"v": 1})).map_err(|e| anyhow::anyhow!(e))?;
-    let canon = vertrule_schemas::jcs::to_canon_bytes(payload.as_value())?;
+    let canon = vr_jcs::to_canon_bytes(payload.as_value())?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&canon).as_bytes());
 
     let envelope = ReceiptEnvelope {

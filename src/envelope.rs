@@ -19,7 +19,7 @@ pub use vertrule_schemas::ReceiptEnvelope;
 /// does not equal the declared `event_hash`, or [`VerifyError::Canon`] if
 /// canonicalization fails.
 pub fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
-    let computed_digest = vertrule_schemas::compute_event_hash(envelope)
+    let computed_digest = vertrule_schemas::receipts::compute_event_hash(envelope)
         .map_err(|e| VerifyError::Canon(format!("{e}")))?;
 
     if computed_digest == envelope.event_hash {
@@ -45,6 +45,27 @@ pub fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), VerifyE
     } else {
         Err(VerifyError::UnsupportedVersion { version: v.get() })
     }
+}
+
+/// Validate the structural integrity of a receipt envelope.
+///
+/// Checks:
+/// 1. Algorithm markers (if present) match the version's identity triple
+/// 2. `event_hash` matches the recomputed commitment for this version
+///
+/// Re-homed from `ReceiptEnvelope::validate_integrity` in `vertrule-schemas`
+/// to enforce the nouns/procedures boundary: schemas owns the data shape,
+/// the verifier owns judgment.
+///
+/// # Errors
+///
+/// Returns [`VerifyError::DigestAlgorithmMismatch`] or
+/// [`VerifyError::CanonicalizationMismatch`] if markers conflict, or
+/// [`VerifyError::EventHashMismatch`] if `event_hash` does not match.
+pub fn validate_receipt_envelope_integrity(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
+    verify_algorithms(envelope)?;
+    verify_event_hash(envelope)?;
+    Ok(())
 }
 
 /// Verify that declared algorithms (if present) match the spec version's

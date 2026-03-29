@@ -31,7 +31,7 @@ fn make_v1_test_envelope(
 ) -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload =
         CanonicalPayload::new(payload_json).map_err(|e| anyhow::anyhow!("payload: {e}"))?;
-    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(payload.as_value())
+    let canon_bytes = vr_jcs::to_canon_bytes(payload.as_value())
         .map_err(|e| anyhow::anyhow!("canon: {e}"))?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&canon_bytes).as_bytes());
     let logical_time = IJsonUInt::new(1).map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
@@ -170,7 +170,7 @@ vr_test!(
         let receipt_digest = compute_receipt_digest(&envelope)?;
 
         // Compute plain BLAKE3 (no prefix) — what event_hash uses
-        let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(envelope.payload.as_value())
+        let canon_bytes = vr_jcs::to_canon_bytes(envelope.payload.as_value())
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
         let plain_hash = blake3::hash(&canon_bytes);
         let plain_digest = DigestBytes::from_array(*plain_hash.as_bytes());

@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 /// Compute the BLAKE3 hex digest of the JCS-canonical form of a JSON value.
 fn canon_hash(value: &serde_json::Value) -> Result<String, Box<dyn std::error::Error>> {
-    let bytes = vertrule_schemas::jcs::to_canon_bytes(value)?;
+    let bytes = vr_jcs::to_canon_bytes(value)?;
     Ok(hex::encode(blake3::hash(&bytes).as_bytes()))
 }
 
@@ -101,7 +101,7 @@ fn write_raw(
     let raw_dir = dir.join("raw");
     std::fs::create_dir_all(&raw_dir)?;
     let path = raw_dir.join(format!("{name}.json"));
-    let canon = vertrule_schemas::jcs::to_canon_bytes(value)?;
+    let canon = vr_jcs::to_canon_bytes(value)?;
     std::fs::write(&path, &canon)?;
     eprintln!("  wrote {}", path.display());
     Ok(())
@@ -187,7 +187,7 @@ fn gen_valid_signed(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Err
     let envelope = build_envelope(&payload, 1000, None, "Governance")?;
 
     // Domain-separated receipt digest
-    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&payload)?;
+    let canon_bytes = vr_jcs::to_canon_bytes(&payload)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);
@@ -602,7 +602,7 @@ fn gen_invalid_signature(dir: &std::path::Path) -> Result<(), Box<dyn std::error
     let payload = json!({"action": "signed_change", "version": 1});
 
     // Sign the correct payload
-    let canon_bytes = vertrule_schemas::jcs::to_canon_bytes(&payload)?;
+    let canon_bytes = vr_jcs::to_canon_bytes(&payload)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);

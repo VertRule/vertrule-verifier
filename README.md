@@ -12,7 +12,7 @@ structurally valid and cryptographically consistent?**
 
 It verifies:
 
-- **Envelope version** compatibility (only v1 supported)
+- **Envelope version** compatibility (v1 and v2 supported)
 - **Schema/profile conformance** -- strict field set, known receipt types,
   known boundary origins, unknown-field rejection
 - **JCS canonicalization** (RFC 8785) -- input must already be canonical
@@ -55,7 +55,8 @@ Production dependencies:
 
 | Crate | Purpose |
 |-------|---------|
-| `vertrule-schemas` | Canonical types, JCS canonicalization (RFC 8785) |
+| `vertrule-schemas` | Canonical types (constitutional nouns) |
+| `vr-jcs` | JCS canonicalization (RFC 8785) |
 | `blake3` | Cryptographic hashing |
 | `ed25519-dalek` | Ed25519 signature verification |
 | `serde` / `serde_json` | Deserialization |
@@ -142,7 +143,12 @@ v1 envelope schema. A sync test ensures the profile and code constants match.
 
 ## Known Limitations
 
-- Only `SchemaVersion::V1` is supported (BLAKE3 + JCS)
+- `SchemaVersion::V1` and `V2` are supported (both BLAKE3 + JCS).
+  V1 commits payload only; V2 commits all trust-bearing fields
+  (full-envelope commitment).
+- `signature_validation.present` indicates whether a signature bundle
+  was supplied, regardless of parse success. Malformed bundles count
+  as present; validity is separate.
 - No streaming verification -- entire chain must fit in memory
 - No policy evaluation -- only structural and cryptographic checks
 - Signature verification requires the public key to be supplied externally

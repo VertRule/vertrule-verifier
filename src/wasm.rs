@@ -31,7 +31,7 @@ fn result_to_json(result: &VerificationResult) -> String {
         }
     };
 
-    match vertrule_schemas::jcs::to_canon_string(&value) {
+    match vr_jcs::to_canon_string(&value) {
         Ok(s) => s,
         Err(e) => error_json(&format!("canonicalization error: {e}")),
     }
@@ -115,7 +115,7 @@ mod tests {
     fn verify_receipt_json_returns_valid_for_good_input() {
         // Build a valid single envelope as canonical JSON
         let payload = serde_json::json!({"key": "value"});
-        let payload_canon = vertrule_schemas::jcs::to_canon_bytes(&payload)
+        let payload_canon = vr_jcs::to_canon_bytes(&payload)
             .map_err(|e| format!("{e}"))
             .ok();
         let Some(ref canon_bytes) = payload_canon else {
@@ -144,7 +144,7 @@ mod tests {
         );
 
         let value = serde_json::Value::Object(obj);
-        let Ok(input) = vertrule_schemas::jcs::to_canon_string(&value) else {
+        let Ok(input) = vr_jcs::to_canon_string(&value) else {
             return;
         };
 
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn result_determinism_through_wasm_api() {
         let payload = serde_json::json!({"key": "value"});
-        let payload_canon = vertrule_schemas::jcs::to_canon_bytes(&payload)
+        let payload_canon = vr_jcs::to_canon_bytes(&payload)
             .map_err(|e| format!("{e}"))
             .ok();
         let Some(ref canon_bytes) = payload_canon else {
@@ -247,7 +247,7 @@ mod tests {
         );
 
         let value = serde_json::Value::Object(obj);
-        let Ok(input) = vertrule_schemas::jcs::to_canon_string(&value) else {
+        let Ok(input) = vr_jcs::to_canon_string(&value) else {
             return;
         };
 

@@ -229,13 +229,14 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
         result.add_error(e.to_string());
     }
 
-    // Parse signature bundle
+    // Parse signature bundle — present is true because bytes were supplied,
+    // regardless of whether they parse successfully.
     let bundle: SignatureBundle = match serde_json::from_slice(sig_bytes) {
         Ok(b) => b,
         Err(e) => {
             result.add_error(format!("invalid signature bundle: {e}"));
             result.signature_validation = Some(SignatureValidation {
-                present: false,
+                present: true,
                 valid: false,
                 key_id_consistent: false,
             });
@@ -254,9 +255,8 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
         }
         Err(e) => {
             result.add_error(e.to_string());
-            let present = !matches!(e, crate::error::VerifyError::SignatureDataMalformed { .. });
             result.signature_validation = Some(SignatureValidation {
-                present,
+                present: true,
                 valid: false,
                 key_id_consistent: false,
             });
@@ -299,13 +299,13 @@ pub fn verify_signed_receipt_with_trust(
         result.add_error(e.to_string());
     }
 
-    // Parse signature bundle
+    // Parse signature bundle — present is true because bytes were supplied.
     let bundle: SignatureBundle = match serde_json::from_slice(sig_bytes) {
         Ok(b) => b,
         Err(e) => {
             result.add_error(format!("invalid signature bundle: {e}"));
             result.signature_validation = Some(SignatureValidation {
-                present: false,
+                present: true,
                 valid: false,
                 key_id_consistent: false,
             });
@@ -324,10 +324,8 @@ pub fn verify_signed_receipt_with_trust(
         }
         Err(e) => {
             result.add_error(e.to_string());
-            let present =
-                !matches!(e, crate::error::VerifyError::SignatureDataMalformed { .. });
             result.signature_validation = Some(SignatureValidation {
-                present,
+                present: true,
                 valid: false,
                 key_id_consistent: false,
             });

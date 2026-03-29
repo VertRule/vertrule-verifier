@@ -18,7 +18,7 @@ fn valid_canonical_envelope_bytes() -> Result<Vec<u8>, anyhow::Error> {
         "payload": {"key": "value"}
     });
     // Canonicalize for the canonical form check
-    vertrule_schemas::jcs::to_canon_bytes(&value)
+    vr_jcs::to_canon_bytes(&value)
         .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
@@ -81,7 +81,7 @@ vr_test!(
             "payload": {"key": "value"},
             "bogus": 42
         });
-        let bytes = vertrule_schemas::jcs::to_canon_bytes(&value)
+        let bytes = vr_jcs::to_canon_bytes(&value)
             .map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
         let Err(err) = super::ingest_envelope(&bytes) else {
             anyhow::bail!("expected error, got Ok")

@@ -453,7 +453,7 @@ vr_test!(
             "value": 42
         });
         let canon_bytes =
-            vertrule_schemas::jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
+            vr_jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
         let computed = hex::encode(blake3::hash(&canon_bytes).as_bytes());
 
         let vector = load_vector("valid_single_envelope")?;

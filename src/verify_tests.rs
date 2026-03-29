@@ -10,7 +10,7 @@ fn build_envelope_value(
     parent_id: Option<&str>,
     payload: serde_json::Value,
 ) -> Result<(serde_json::Value, String), anyhow::Error> {
-    let payload_canon = vertrule_schemas::jcs::to_canon_bytes(&payload)
+    let payload_canon = vr_jcs::to_canon_bytes(&payload)
         .map_err(|e| anyhow::anyhow!("payload canonicalization: {e}"))?;
     let hash = blake3::hash(&payload_canon);
     let event_hash = hex::encode(hash.as_bytes());
@@ -46,7 +46,7 @@ fn build_single_bytes(
     payload: serde_json::Value,
 ) -> Result<Vec<u8>, anyhow::Error> {
     let (value, _hash) = build_envelope_value(logical_time, None, payload)?;
-    vertrule_schemas::jcs::to_canon_bytes(&value)
+    vr_jcs::to_canon_bytes(&value)
         .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
@@ -64,7 +64,7 @@ fn build_valid_chain_bytes(count: usize) -> Result<Vec<u8>, anyhow::Error> {
     }
 
     let array = serde_json::Value::Array(elements);
-    vertrule_schemas::jcs::to_canon_bytes(&array)
+    vr_jcs::to_canon_bytes(&array)
         .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
@@ -108,7 +108,7 @@ vr_test!(
             serde_json::json!("b".repeat(64)),
         );
         let value = serde_json::Value::Object(obj);
-        let bytes = vertrule_schemas::jcs::to_canon_bytes(&value)
+        let bytes = vr_jcs::to_canon_bytes(&value)
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt(&bytes);
@@ -157,7 +157,7 @@ vr_test!(
             build_envelope_value(1001, Some(&"f".repeat(64)), serde_json::json!({"index": 1}))?;
 
         let array = serde_json::Value::Array(vec![env0, env1]);
-        let bytes = vertrule_schemas::jcs::to_canon_bytes(&array)
+        let bytes = vr_jcs::to_canon_bytes(&array)
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
@@ -174,7 +174,7 @@ vr_test!(
             build_envelope_value(1000, Some(&hash0), serde_json::json!({"index": 1}))?;
 
         let array = serde_json::Value::Array(vec![env0, env1]);
-        let bytes = vertrule_schemas::jcs::to_canon_bytes(&array)
+        let bytes = vr_jcs::to_canon_bytes(&array)
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
@@ -206,7 +206,7 @@ vr_test!(
         env1_val["schema_digest"] = serde_json::json!("f".repeat(64));
 
         let array = serde_json::Value::Array(vec![env0, env1_val]);
-        let bytes = vertrule_schemas::jcs::to_canon_bytes(&array)
+        let bytes = vr_jcs::to_canon_bytes(&array)
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
@@ -228,5 +228,41 @@ vr_test!(
         let d1 = r1.digest()?;
         let d2 = r2.digest()?;
         assert_eq!(d1, d2);
+    }
+);
+
+// ── signature_validation.present regression tests ─────────────────
+
+vr_test!(
+    /// Malformed JSON supplied as signature bundle → present: true, valid: false.
+    fn test_malformed_sig_bundle_is_present_but_invalid() {
+        let receipt_bytes = build_single_bytes(1000, serde_json::json!({"key": "value"}))?;
+        let malformed_sig = b"this is not json";
+
+        let result = super::verify_signed_receipt(&receipt_bytes, malformed_sig);
+        let sig = result
+            .signature_validation
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("missing signature_validation"))?;
+
+        assert!(sig.present, "bundle was supplied, present must be true");
+        assert!(!sig.valid, "malformed bundle cannot be valid");
+    }
+);
+
+vr_test!(
+    /// Valid JSON but wrong schema as signature bundle → present: true, valid: false.
+    fn test_wrong_schema_sig_bundle_is_present_but_invalid() {
+        let receipt_bytes = build_single_bytes(1000, serde_json::json!({"key": "value"}))?;
+        let wrong_schema_sig = br#"{"not_a": "signature_bundle"}"#;
+
+        let result = super::verify_signed_receipt(&receipt_bytes, wrong_schema_sig);
+        let sig = result
+            .signature_validation
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("missing signature_validation"))?;
+
+        assert!(sig.present, "bundle was supplied, present must be true");
+        assert!(!sig.valid, "wrong-schema bundle cannot be valid");
     }
 );

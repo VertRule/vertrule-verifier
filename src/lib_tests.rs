@@ -17,7 +17,7 @@ use vertrule_schemas::{DigestBytes, IJsonUInt, ReceiptType, SchemaVersion};
 
 /// Compute a BLAKE3 digest over the JCS-canonical form of a `serde_json::Value`.
 fn canon_hash(value: &serde_json::Value) -> Result<DigestBytes, VerifyError> {
-    let bytes = vertrule_schemas::jcs::to_canon_bytes(value)
+    let bytes = vr_jcs::to_canon_bytes(value)
         .map_err(|e| VerifyError::Canon(format!("{e}")))?;
     let hash = blake3::hash(&bytes);
     Ok(DigestBytes::from_array(*hash.as_bytes()))

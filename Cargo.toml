@@ -1,11 +1,10 @@
 [package]
 # Publish gate: requires vertrule-schemas and vr-jcs published first, plus WASM CI green.
-publish = false
 name = "vr-verifier"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Public-facing verifier for VertRule governance receipts -- zero runtime deps"
+description = "Public-facing verifier for VertRule receipt envelopes -- zero runtime deps"
 repository = "https://github.com/VertRule/vertrule-verifier"
 
 [lib]
@@ -27,7 +26,8 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
-vertrule-schemas = { path = "../vertrule-schemas" }
+vertrule-schemas = { version = "0.1.0", path = "../vertrule-schemas" }
+vr-jcs = { version = "0.2.0", path = "../vr-jcs" }
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
