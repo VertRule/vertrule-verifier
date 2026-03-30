@@ -10,6 +10,8 @@ dependencies — does not import the private execution stack.
 - Signed verification: `verify_signed_receipt`, `verify_signed_receipt_with_trust`
 - Envelope integrity: `validate_receipt_envelope_integrity` (re-homed
   from `vertrule-schemas`)
+- MRI payload validation: `validate_mri_batch_payload`,
+  `validate_gradient_coupling_payload`
 - Authority-set trust evaluation
 - CLI: `vr-verify receipt|chain|signed`
 - JCS-canonical deterministic result output with BLAKE3 result digest

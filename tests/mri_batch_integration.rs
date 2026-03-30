@@ -39,7 +39,7 @@ fn scalar_only() -> MriBatchPayload {
     }
 }
 
-/// Build a valid ReceiptEnvelope from an MriBatchPayload.
+/// Build a valid `ReceiptEnvelope` from an `MriBatchPayload`.
 fn envelope_from_batch_payload(
     payload: &MriBatchPayload,
 ) -> Result<ReceiptEnvelope, Box<dyn std::error::Error>> {
@@ -71,41 +71,37 @@ fn envelope_from_batch_payload(
 // ---------------------------------------------------------------------------
 
 #[test]
-fn valid_scalar_only_passes_full_pipeline() {
+fn valid_scalar_only_passes_full_pipeline() -> Result<(), Box<dyn std::error::Error>> {
     let batch = scalar_only();
 
-    let envelope = envelope_from_batch_payload(&batch)
-        .expect("envelope construction");
-    let raw = vr_jcs::to_canon_bytes(&envelope)
-        .expect("canonical bytes");
+    let envelope = envelope_from_batch_payload(&batch)?;
+    let raw = vr_jcs::to_canon_bytes(&envelope)?;
 
     let result = verify_receipt(&raw);
     assert_eq!(result.status, VerificationStatus::Valid);
 
-    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())
-        .expect("parse MriBatchPayload");
+    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())?;
     assert!(validate_mri_batch_payload(&recovered).is_ok());
+    Ok(())
 }
 
 #[test]
-fn valid_vector_payload_passes_full_pipeline() {
+fn valid_vector_payload_passes_full_pipeline() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = scalar_only();
     batch.layer = 5;
     batch.q_scalar = 0x4120_0000;
     batch.batch_len = Some(3);
     batch.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000, 0x4040_0000]);
 
-    let envelope = envelope_from_batch_payload(&batch)
-        .expect("envelope construction");
-    let raw = vr_jcs::to_canon_bytes(&envelope)
-        .expect("canonical bytes");
+    let envelope = envelope_from_batch_payload(&batch)?;
+    let raw = vr_jcs::to_canon_bytes(&envelope)?;
 
     let result = verify_receipt(&raw);
     assert_eq!(result.status, VerificationStatus::Valid);
 
-    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())
-        .expect("parse MriBatchPayload");
+    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())?;
     assert!(validate_mri_batch_payload(&recovered).is_ok());
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -113,42 +109,38 @@ fn valid_vector_payload_passes_full_pipeline() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn vector_without_batch_len_rejected_after_valid_envelope() {
+fn vector_without_batch_len_rejected_after_valid_envelope() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = scalar_only();
     batch.q_per_example = Some(vec![0x3F80_0000]);
 
-    let envelope = envelope_from_batch_payload(&batch)
-        .expect("envelope construction");
-    let raw = vr_jcs::to_canon_bytes(&envelope)
-        .expect("canonical bytes");
+    let envelope = envelope_from_batch_payload(&batch)?;
+    let raw = vr_jcs::to_canon_bytes(&envelope)?;
 
     // Envelope is still valid (opaque payload)
     let result = verify_receipt(&raw);
     assert_eq!(result.status, VerificationStatus::Valid);
 
     // But shape validation catches the error
-    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())
-        .expect("parse MriBatchPayload");
+    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())?;
     assert!(validate_mri_batch_payload(&recovered).is_err());
+    Ok(())
 }
 
 #[test]
-fn vector_length_mismatch_rejected_after_valid_envelope() {
+fn vector_length_mismatch_rejected_after_valid_envelope() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = scalar_only();
     batch.batch_len = Some(5);
     batch.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000]); // 2 != 5
 
-    let envelope = envelope_from_batch_payload(&batch)
-        .expect("envelope construction");
-    let raw = vr_jcs::to_canon_bytes(&envelope)
-        .expect("canonical bytes");
+    let envelope = envelope_from_batch_payload(&batch)?;
+    let raw = vr_jcs::to_canon_bytes(&envelope)?;
 
     let result = verify_receipt(&raw);
     assert_eq!(result.status, VerificationStatus::Valid);
 
-    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())
-        .expect("parse MriBatchPayload");
+    let recovered: MriBatchPayload = serde_json::from_value(envelope.payload.into_value())?;
     assert!(validate_mri_batch_payload(&recovered).is_err());
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -156,17 +148,18 @@ fn vector_length_mismatch_rejected_after_valid_envelope() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn different_reduction_modes_produce_different_envelopes() {
+fn different_reduction_modes_produce_different_envelopes() -> Result<(), Box<dyn std::error::Error>> {
     let mut p1 = scalar_only();
     p1.provenance.reduction_mode = ReductionMode::BatchCollapsed;
 
     let mut p2 = p1.clone();
     p2.provenance.reduction_mode = ReductionMode::PerExampleThenMean;
 
-    let e1 = envelope_from_batch_payload(&p1).expect("e1");
-    let e2 = envelope_from_batch_payload(&p2).expect("e2");
+    let e1 = envelope_from_batch_payload(&p1)?;
+    let e2 = envelope_from_batch_payload(&p2)?;
 
     assert_ne!(e1.event_hash, e2.event_hash);
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +174,7 @@ fn unknown_reduction_mode_fails_at_parse_not_validation() {
     let raw_payload = serde_json::json!({
         "schema": "mri2.batch_invariant@0.1",
         "layer": 0,
-        "q_scalar": 1065353216,
+        "q_scalar": 1_065_353_216,
         "provenance": {
             "reduction_mode": "invented_mode",
             "reduced_axes": ["token"],

@@ -30,10 +30,10 @@ const GRADIENT_COUPLING_SCHEMA: &str = "mri2.gradient_coupling@0.1";
 /// - `q_per_example` is present but `batch_len` is absent
 /// - `q_per_example` length does not equal `batch_len`
 pub fn validate_mri_batch_payload(payload: &MriBatchPayload) -> Result<(), VerifyError> {
-    check_vector_field(payload.batch_len, &payload.q_per_example, "q_per_example")?;
-    check_vector_field(payload.batch_len, &payload.e_per_example, "e_per_example")?;
-    check_vector_field(payload.batch_len, &payload.h_per_example, "h_per_example")?;
-    check_vector_field(payload.batch_len, &payload.c_per_example, "c_per_example")?;
+    check_vector_field(payload.batch_len, payload.q_per_example.as_ref(), "q_per_example")?;
+    check_vector_field(payload.batch_len, payload.e_per_example.as_ref(), "e_per_example")?;
+    check_vector_field(payload.batch_len, payload.h_per_example.as_ref(), "h_per_example")?;
+    check_vector_field(payload.batch_len, payload.c_per_example.as_ref(), "c_per_example")?;
 
     if let Some(ref mask) = payload.degenerate_mask {
         let Some(batch_len) = payload.batch_len else {
@@ -147,10 +147,10 @@ fn check_all_finite(field: &[u32], name: &str) -> Result<(), VerifyError> {
 /// Check a single optional per-example vector field against `batch_len`.
 fn check_vector_field(
     batch_len: Option<u32>,
-    field: &Option<Vec<u32>>,
+    field: Option<&Vec<u32>>,
     name: &str,
 ) -> Result<(), VerifyError> {
-    if let Some(ref vec) = *field {
+    if let Some(vec) = field {
         let Some(batch_len) = batch_len else {
             return Err(VerifyError::PayloadShapeMismatch {
                 reason: format!("{name} present but batch_len is absent"),
@@ -217,30 +217,32 @@ mod tests {
     }
 
     #[test]
-    fn vector_without_batch_len_rejected() {
+    fn vector_without_batch_len_rejected() -> Result<(), anyhow::Error> {
         let mut p = scalar_only();
         p.q_per_example = Some(vec![0x3F80_0000]);
-        let err = validate_mri_batch_payload(&p).unwrap_err();
-        match err {
-            VerifyError::PayloadShapeMismatch { ref reason } => {
-                assert!(reason.contains("batch_len is absent"), "got: {reason}");
-            }
-            other => panic!("expected PayloadShapeMismatch, got: {other}"),
-        }
+        let Err(err) = validate_mri_batch_payload(&p) else {
+            return Err(anyhow::anyhow!("expected validation to fail"));
+        };
+        let VerifyError::PayloadShapeMismatch { ref reason } = err else {
+            return Err(anyhow::anyhow!("expected PayloadShapeMismatch, got: {err}"));
+        };
+        assert!(reason.contains("batch_len is absent"), "got: {reason}");
+        Ok(())
     }
 
     #[test]
-    fn vector_length_mismatch_rejected() {
+    fn vector_length_mismatch_rejected() -> Result<(), anyhow::Error> {
         let mut p = scalar_only();
         p.batch_len = Some(4);
         p.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000]);
-        let err = validate_mri_batch_payload(&p).unwrap_err();
-        match err {
-            VerifyError::PayloadShapeMismatch { ref reason } => {
-                assert!(reason.contains("does not match"), "got: {reason}");
-            }
-            other => panic!("expected PayloadShapeMismatch, got: {other}"),
-        }
+        let Err(err) = validate_mri_batch_payload(&p) else {
+            return Err(anyhow::anyhow!("expected validation to fail"));
+        };
+        let VerifyError::PayloadShapeMismatch { ref reason } = err else {
+            return Err(anyhow::anyhow!("expected PayloadShapeMismatch, got: {err}"));
+        };
+        assert!(reason.contains("does not match"), "got: {reason}");
+        Ok(())
     }
 
     #[test]

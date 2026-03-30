@@ -34,6 +34,13 @@ pub fn validate_receipt_envelope_integrity(
 ) -> Result<(), VerifyError>;
 ```
 
+### MRI payload validation
+
+```rust
+pub fn validate_mri_batch_payload(payload: &MriBatchPayload) -> Result<(), VerifyError>;
+pub fn validate_gradient_coupling_payload(payload: &GradientCouplingPayload) -> Result<(), VerifyError>;
+```
+
 ### Error types
 
 ```rust

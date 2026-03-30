@@ -16,6 +16,10 @@ use vr_verifier::verify_signed_receipt_with_trust;
 // Envelope integrity (re-homed from vertrule-schemas)
 use vr_verifier::validate_receipt_envelope_integrity;
 
+// MRI payload validation
+use vr_verifier::validate_gradient_coupling_payload;
+use vr_verifier::validate_mri_batch_payload;
+
 // Result types
 use vr_verifier::result::VerificationResult;
 use vr_verifier::result::VerificationStatus;
@@ -73,4 +77,6 @@ fn public_surface_symbols_are_usable() {
     let _ = std::any::type_name::<ReceiptEnvelope>();
     let _ = std::any::type_name::<SchemaVersion>();
     let _ = validate_receipt_envelope_integrity as fn(&ReceiptEnvelope) -> Result<(), VerifyError>;
+    let _ = validate_mri_batch_payload as fn(&vertrule_schemas::MriBatchPayload) -> Result<(), VerifyError>;
+    let _ = validate_gradient_coupling_payload as fn(&vertrule_schemas::GradientCouplingPayload) -> Result<(), VerifyError>;
 }
