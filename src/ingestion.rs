@@ -162,10 +162,9 @@ fn reject_structural_floats(value: &serde_json::Value) -> Result<(), VerifyError
 
 /// Verify that the raw input bytes are in JCS canonical form.
 fn verify_canonical_form(raw_bytes: &[u8], value: &serde_json::Value) -> Result<(), VerifyError> {
-    let canonical =
-        vr_jcs::to_canon_bytes(value).map_err(|e| VerifyError::NonCanonical {
-            reason: format!("canonicalization failed: {e}"),
-        })?;
+    let canonical = vr_jcs::to_canon_bytes(value).map_err(|e| VerifyError::NonCanonical {
+        reason: format!("canonicalization failed: {e}"),
+    })?;
 
     if raw_bytes != canonical.as_slice() {
         return Err(VerifyError::NonCanonical {

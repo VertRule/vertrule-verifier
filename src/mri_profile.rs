@@ -30,10 +30,26 @@ const GRADIENT_COUPLING_SCHEMA: &str = "mri2.gradient_coupling@0.1";
 /// - `q_per_example` is present but `batch_len` is absent
 /// - `q_per_example` length does not equal `batch_len`
 pub fn validate_mri_batch_payload(payload: &MriBatchPayload) -> Result<(), VerifyError> {
-    check_vector_field(payload.batch_len, payload.q_per_example.as_ref(), "q_per_example")?;
-    check_vector_field(payload.batch_len, payload.e_per_example.as_ref(), "e_per_example")?;
-    check_vector_field(payload.batch_len, payload.h_per_example.as_ref(), "h_per_example")?;
-    check_vector_field(payload.batch_len, payload.c_per_example.as_ref(), "c_per_example")?;
+    check_vector_field(
+        payload.batch_len,
+        payload.q_per_example.as_ref(),
+        "q_per_example",
+    )?;
+    check_vector_field(
+        payload.batch_len,
+        payload.e_per_example.as_ref(),
+        "e_per_example",
+    )?;
+    check_vector_field(
+        payload.batch_len,
+        payload.h_per_example.as_ref(),
+        "h_per_example",
+    )?;
+    check_vector_field(
+        payload.batch_len,
+        payload.c_per_example.as_ref(),
+        "c_per_example",
+    )?;
 
     if let Some(ref mask) = payload.degenerate_mask {
         let Some(batch_len) = payload.batch_len else {
@@ -115,11 +131,7 @@ pub fn validate_gradient_coupling_payload(
 }
 
 /// Check a required fixed-length vector field against expected length.
-fn check_fixed_vector(
-    expected: usize,
-    field: &[u32],
-    name: &str,
-) -> Result<(), VerifyError> {
+fn check_fixed_vector(expected: usize, field: &[u32], name: &str) -> Result<(), VerifyError> {
     if field.len() != expected {
         return Err(VerifyError::PayloadShapeMismatch {
             reason: format!(
@@ -179,7 +191,11 @@ mod tests {
     fn sample_provenance() -> ReductionProvenance {
         ReductionProvenance {
             reduction_mode: ReductionMode::PerExampleThenMean,
-            reduced_axes: vec![ReductionAxis::Token, ReductionAxis::Hidden, ReductionAxis::Batch],
+            reduced_axes: vec![
+                ReductionAxis::Token,
+                ReductionAxis::Hidden,
+                ReductionAxis::Batch,
+            ],
             token_reduction: TokenReduction::Mean,
             batch_reduction: BatchReduction::Mean,
         }
@@ -393,6 +409,9 @@ mod tests {
             }
         }"#;
         let result: Result<MriBatchPayload, _> = serde_json::from_str(json);
-        assert!(result.is_err(), "unknown reduction_mode must fail at parse, not validation");
+        assert!(
+            result.is_err(),
+            "unknown reduction_mode must fail at parse, not validation"
+        );
     }
 }

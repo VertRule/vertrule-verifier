@@ -460,6 +460,8 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vertrule-schemas"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43b1dd9082954b7ee9cafdf8292f8c737472fc38f5e624e1cc8b4c06d8f347ef"
 dependencies = [
  "blake3",
  "hex",
@@ -472,6 +474,8 @@ dependencies = [
 [[package]]
 name = "vr-jcs"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af9c9d514cf7d1bcaa5f420b5b5fddfaaedcb939774a72cbc081ea142e2d3774"
 dependencies = [
  "serde",
  "serde_json",

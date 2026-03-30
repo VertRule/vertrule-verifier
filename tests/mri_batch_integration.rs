@@ -6,16 +6,20 @@
 
 use vertrule_schemas::{
     BatchReduction, BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, MriBatchPayload,
-    ReceiptEnvelope, ReceiptType, ReductionAxis, ReductionMode, ReductionProvenance,
-    SchemaVersion, TokenReduction,
+    ReceiptEnvelope, ReceiptType, ReductionAxis, ReductionMode, ReductionProvenance, SchemaVersion,
+    TokenReduction,
 };
-use vr_verifier::{validate_mri_batch_payload, verify_receipt};
 use vr_verifier::result::VerificationStatus;
+use vr_verifier::{validate_mri_batch_payload, verify_receipt};
 
 fn sample_provenance() -> ReductionProvenance {
     ReductionProvenance {
         reduction_mode: ReductionMode::PerExampleThenMean,
-        reduced_axes: vec![ReductionAxis::Token, ReductionAxis::Hidden, ReductionAxis::Batch],
+        reduced_axes: vec![
+            ReductionAxis::Token,
+            ReductionAxis::Hidden,
+            ReductionAxis::Batch,
+        ],
         token_reduction: TokenReduction::Mean,
         batch_reduction: BatchReduction::Mean,
     }
@@ -109,7 +113,8 @@ fn valid_vector_payload_passes_full_pipeline() -> Result<(), Box<dyn std::error:
 // ---------------------------------------------------------------------------
 
 #[test]
-fn vector_without_batch_len_rejected_after_valid_envelope() -> Result<(), Box<dyn std::error::Error>> {
+fn vector_without_batch_len_rejected_after_valid_envelope() -> Result<(), Box<dyn std::error::Error>>
+{
     let mut batch = scalar_only();
     batch.q_per_example = Some(vec![0x3F80_0000]);
 
@@ -127,7 +132,8 @@ fn vector_without_batch_len_rejected_after_valid_envelope() -> Result<(), Box<dy
 }
 
 #[test]
-fn vector_length_mismatch_rejected_after_valid_envelope() -> Result<(), Box<dyn std::error::Error>> {
+fn vector_length_mismatch_rejected_after_valid_envelope() -> Result<(), Box<dyn std::error::Error>>
+{
     let mut batch = scalar_only();
     batch.batch_len = Some(5);
     batch.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000]); // 2 != 5
@@ -148,7 +154,8 @@ fn vector_length_mismatch_rejected_after_valid_envelope() -> Result<(), Box<dyn 
 // ---------------------------------------------------------------------------
 
 #[test]
-fn different_reduction_modes_produce_different_envelopes() -> Result<(), Box<dyn std::error::Error>> {
+fn different_reduction_modes_produce_different_envelopes() -> Result<(), Box<dyn std::error::Error>>
+{
     let mut p1 = scalar_only();
     p1.provenance.reduction_mode = ReductionMode::BatchCollapsed;
 
@@ -183,7 +190,9 @@ fn unknown_reduction_mode_fails_at_parse_not_validation() {
         }
     });
 
-    let parse_result: Result<MriBatchPayload, _> =
-        serde_json::from_value(raw_payload);
-    assert!(parse_result.is_err(), "unknown reduction_mode must be a parse failure");
+    let parse_result: Result<MriBatchPayload, _> = serde_json::from_value(raw_payload);
+    assert!(
+        parse_result.is_err(),
+        "unknown reduction_mode must be a parse failure"
+    );
 }

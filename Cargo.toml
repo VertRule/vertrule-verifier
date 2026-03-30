@@ -26,8 +26,8 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
-vertrule-schemas = { version = "0.1.0", path = "../vertrule-schemas" }
-vr-jcs = { version = "0.2.0", path = "../vr-jcs" }
+vertrule-schemas = "0.1"
+vr-jcs = "0.2"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]

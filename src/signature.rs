@@ -154,8 +154,7 @@ pub fn compute_receipt_digest(
         if let serde_json::Value::Object(ref mut map) = value {
             map.remove("event_hash");
         }
-        vr_jcs::to_canon_bytes(&value)
-            .map_err(|e| VerifyError::Canon(format!("{e}")))?
+        vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?
     } else {
         // V1: hash payload only
         vr_jcs::to_canon_bytes(envelope.payload.as_value())

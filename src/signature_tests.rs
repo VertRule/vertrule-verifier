@@ -31,8 +31,8 @@ fn make_v1_test_envelope(
 ) -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload =
         CanonicalPayload::new(payload_json).map_err(|e| anyhow::anyhow!("payload: {e}"))?;
-    let canon_bytes = vr_jcs::to_canon_bytes(payload.as_value())
-        .map_err(|e| anyhow::anyhow!("canon: {e}"))?;
+    let canon_bytes =
+        vr_jcs::to_canon_bytes(payload.as_value()).map_err(|e| anyhow::anyhow!("canon: {e}"))?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&canon_bytes).as_bytes());
     let logical_time = IJsonUInt::new(1).map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
 

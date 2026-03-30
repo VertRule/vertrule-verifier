@@ -169,8 +169,8 @@ impl VerificationResult {
     /// Returns error if canonicalization fails.
     pub fn digest(&self) -> Result<DigestBytes, VerifyError> {
         let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
-        let canon_bytes = vr_jcs::to_canon_bytes(&value)
-            .map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        let canon_bytes =
+            vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
         let hash = blake3::hash(&canon_bytes);
         Ok(DigestBytes::from_array(*hash.as_bytes()))
     }

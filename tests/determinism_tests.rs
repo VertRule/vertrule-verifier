@@ -68,10 +68,10 @@ vr_test!(
         let payload_a = serde_json::json!({"alpha": 1, "beta": 2, "gamma": 3});
         let payload_b = serde_json::json!({"gamma": 3, "alpha": 1, "beta": 2});
 
-        let canon_a = vr_jcs::to_canon_bytes(&payload_a)
-            .map_err(|e| anyhow::anyhow!("canon a: {e}"))?;
-        let canon_b = vr_jcs::to_canon_bytes(&payload_b)
-            .map_err(|e| anyhow::anyhow!("canon b: {e}"))?;
+        let canon_a =
+            vr_jcs::to_canon_bytes(&payload_a).map_err(|e| anyhow::anyhow!("canon a: {e}"))?;
+        let canon_b =
+            vr_jcs::to_canon_bytes(&payload_b).map_err(|e| anyhow::anyhow!("canon b: {e}"))?;
 
         let hash_a = hex::encode(blake3::hash(&canon_a).as_bytes());
         let hash_b = hex::encode(blake3::hash(&canon_b).as_bytes());

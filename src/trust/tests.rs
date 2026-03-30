@@ -6,10 +6,12 @@ fn test_key_id() -> KeyId {
     let sk = ed25519_dalek::SigningKey::from_bytes(&seed);
     let pk = sk.verifying_key();
     let hash = blake3::hash(pk.as_bytes());
-    KeyId::from_hex(&hex::encode(&hash.as_bytes()[..12])).ok()
+    KeyId::from_hex(&hex::encode(&hash.as_bytes()[..12]))
+        .ok()
         .unwrap_or_else(|| {
             // Fallback: use a synthetic key ID for testing
-            KeyId::from_hex(&"a".repeat(24)).ok()
+            KeyId::from_hex(&"a".repeat(24))
+                .ok()
                 .unwrap_or_else(|| unreachable!())
         })
 }
@@ -81,7 +83,10 @@ fn untrusted_key_not_in_set() {
     if let Ok(kid) = unknown_key {
         let result = evaluate_trust(&kid, &set, &policy);
         assert_eq!(result.status, TrustStatus::Untrusted);
-        assert!(result.detail.as_ref().is_some_and(|d| d.contains("not found")));
+        assert!(result
+            .detail
+            .as_ref()
+            .is_some_and(|d| d.contains("not found")));
     }
 }
 
@@ -113,7 +118,10 @@ fn revoked_key_rejected() {
 
     let result = evaluate_trust(&test_key_id(), &set, &policy);
     assert_eq!(result.status, TrustStatus::Revoked);
-    assert!(result.detail.as_ref().is_some_and(|d| d.contains("compromised")));
+    assert!(result
+        .detail
+        .as_ref()
+        .is_some_and(|d| d.contains("compromised")));
 }
 
 #[test]
@@ -264,6 +272,9 @@ fn trust_status_display_is_stable() {
 #[test]
 fn trust_status_serializes_to_lowercase() -> Result<(), serde_json::Error> {
     assert_eq!(serde_json::to_string(&TrustStatus::Trusted)?, "\"trusted\"");
-    assert_eq!(serde_json::to_string(&TrustStatus::WrongEpoch)?, "\"wrong_epoch\"");
+    assert_eq!(
+        serde_json::to_string(&TrustStatus::WrongEpoch)?,
+        "\"wrong_epoch\""
+    );
     Ok(())
 }
