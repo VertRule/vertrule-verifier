@@ -4,8 +4,8 @@ use vertrule_schemas::{
     BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope, ReceiptType,
     SchemaVersion,
 };
-use vr_verifier::limits::VerifierLimits;
-use vr_verifier::result::VerificationStatus;
+use vertrule_verifier::limits::VerifierLimits;
+use vertrule_verifier::result::VerificationStatus;
 
 const fn zero_digest() -> DigestBytes {
     DigestBytes::from_array([0u8; 32])
@@ -58,7 +58,7 @@ fn oversized_single_envelope_rejected() -> Result<(), anyhow::Error> {
     };
     let envelope = make_v1_envelope(1, None)?;
     let json = vr_jcs::to_canon_string(&envelope)?;
-    let result = vr_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
+    let result = vertrule_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert!(result.errors[0].contains("input too large"));
     Ok(())
@@ -73,7 +73,7 @@ fn chain_within_limit_passes() -> Result<(), anyhow::Error> {
         ..VerifierLimits::default()
     };
     let chain_json = build_chain_json(5)?;
-    let result = vr_verifier::verify_receipt_chain_with_limits(&chain_json, &limits);
+    let result = vertrule_verifier::verify_receipt_chain_with_limits(&chain_json, &limits);
     assert_eq!(
         result.status,
         VerificationStatus::Valid,
@@ -90,7 +90,7 @@ fn chain_exceeding_limit_rejected() -> Result<(), anyhow::Error> {
         ..VerifierLimits::default()
     };
     let chain_json = build_chain_json(4)?;
-    let result = vr_verifier::verify_receipt_chain_with_limits(&chain_json, &limits);
+    let result = vertrule_verifier::verify_receipt_chain_with_limits(&chain_json, &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert!(result.errors[0].contains("chain too long"));
     Ok(())
@@ -101,7 +101,7 @@ fn chain_exceeding_limit_rejected() -> Result<(), anyhow::Error> {
 #[test]
 fn default_limits_accept_100_chain() -> Result<(), anyhow::Error> {
     let chain_json = build_chain_json(100)?;
-    let result = vr_verifier::verify_receipt_chain(&chain_json);
+    let result = vertrule_verifier::verify_receipt_chain(&chain_json);
     assert_eq!(
         result.status,
         VerificationStatus::Valid,
@@ -117,7 +117,7 @@ fn default_limits_accept_100_chain() -> Result<(), anyhow::Error> {
 fn large_chain_benchmark_1000() -> Result<(), anyhow::Error> {
     let chain_json = build_chain_json(1_000)?;
     let start = std::time::Instant::now();
-    let result = vr_verifier::verify_receipt_chain(&chain_json);
+    let result = vertrule_verifier::verify_receipt_chain(&chain_json);
     let elapsed = start.elapsed();
     assert_eq!(
         result.status,
@@ -143,7 +143,7 @@ fn limit_error_codes_stable_in_verification_result() -> Result<(), anyhow::Error
     };
     let envelope = make_v1_envelope(1, None)?;
     let json = vr_jcs::to_canon_string(&envelope)?;
-    let result = vr_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
+    let result = vertrule_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert_eq!(result.errors.len(), 1);
     assert!(result.errors[0].starts_with("limit exceeded: input too large"));

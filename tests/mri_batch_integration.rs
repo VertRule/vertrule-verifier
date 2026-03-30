@@ -9,8 +9,8 @@ use vertrule_schemas::{
     ReceiptEnvelope, ReceiptType, ReductionAxis, ReductionMode, ReductionProvenance, SchemaVersion,
     TokenReduction,
 };
-use vr_verifier::result::VerificationStatus;
-use vr_verifier::{validate_mri_batch_payload, verify_receipt};
+use vertrule_verifier::result::VerificationStatus;
+use vertrule_verifier::{validate_mri_batch_payload, verify_receipt};
 
 fn sample_provenance() -> ReductionProvenance {
     ReductionProvenance {

@@ -3,7 +3,7 @@
 //! Ensures that verification results are byte-identical across runs
 //! and that key ordering in JSON does not affect digest computation.
 
-use vr_verifier::result::VerificationStatus;
+use vertrule_verifier::result::VerificationStatus;
 
 macro_rules! vr_test {
     ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
@@ -48,9 +48,9 @@ vr_test!(
     fn three_runs_produce_identical_result_digests() {
         let raw = load_raw("valid_single_envelope")?;
 
-        let r1 = vr_verifier::verify_receipt(&raw);
-        let r2 = vr_verifier::verify_receipt(&raw);
-        let r3 = vr_verifier::verify_receipt(&raw);
+        let r1 = vertrule_verifier::verify_receipt(&raw);
+        let r2 = vertrule_verifier::verify_receipt(&raw);
+        let r3 = vertrule_verifier::verify_receipt(&raw);
 
         let d1 = r1.digest()?;
         let d2 = r2.digest()?;
@@ -86,8 +86,8 @@ vr_test!(
 vr_test!(
     fn valid_and_invalid_produce_different_digests() {
         let raw = load_raw("valid_single_envelope")?;
-        let valid_result = vr_verifier::verify_receipt(&raw);
-        let invalid_result = vr_verifier::verify_receipt(b"not json");
+        let valid_result = vertrule_verifier::verify_receipt(&raw);
+        let invalid_result = vertrule_verifier::verify_receipt(b"not json");
 
         need(
             ok_when(valid_result.status == VerificationStatus::Valid),
@@ -113,8 +113,8 @@ vr_test!(
         let raw = load_raw("valid_signed")?;
         let sig = load_raw("valid_sig")?;
 
-        let r1 = vr_verifier::verify_signed_receipt(&raw, &sig);
-        let r2 = vr_verifier::verify_signed_receipt(&raw, &sig);
+        let r1 = vertrule_verifier::verify_signed_receipt(&raw, &sig);
+        let r2 = vertrule_verifier::verify_signed_receipt(&raw, &sig);
 
         let d1 = r1.digest()?;
         let d2 = r2.digest()?;

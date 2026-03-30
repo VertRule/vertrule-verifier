@@ -41,9 +41,9 @@ fn make_valid_v2_envelope() -> Result<ReceiptEnvelope, anyhow::Error> {
 
 fn verify_envelope(
     envelope: &ReceiptEnvelope,
-) -> Result<vr_verifier::result::VerificationResult, anyhow::Error> {
+) -> Result<vertrule_verifier::result::VerificationResult, anyhow::Error> {
     let json = vr_jcs::to_canon_string(envelope)?;
-    Ok(vr_verifier::verify_receipt(json.as_bytes()))
+    Ok(vertrule_verifier::verify_receipt(json.as_bytes()))
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn v2_valid_envelope_passes() -> Result<(), anyhow::Error> {
     let envelope = make_valid_v2_envelope()?;
     let result = verify_envelope(&envelope)?;
     assert!(
-        result.status == vr_verifier::result::VerificationStatus::Valid,
+        result.status == vertrule_verifier::result::VerificationStatus::Valid,
         "valid V2 envelope should pass: {:?}",
         result.errors
     );
@@ -63,7 +63,7 @@ fn v2_tamper_receipt_type_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.receipt_type = ReceiptType::Mri;
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -72,7 +72,7 @@ fn v2_tamper_context_digest_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.context_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -81,7 +81,7 @@ fn v2_tamper_schema_digest_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.schema_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -90,7 +90,7 @@ fn v2_tamper_policy_digest_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.policy_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -99,7 +99,7 @@ fn v2_tamper_logical_time_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.logical_time = IJsonUInt::new(9999)?;
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -108,7 +108,7 @@ fn v2_tamper_parent_id_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.parent_id = Some(DigestBytes::from_array([0xdd; 32]));
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -117,7 +117,7 @@ fn v2_tamper_boundary_origin_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.boundary_origin = Some(BoundaryOrigin::Adapter);
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -127,7 +127,7 @@ fn v2_tamper_payload_fails() -> Result<(), anyhow::Error> {
     envelope.payload = CanonicalPayload::new(serde_json::json!({"tampered": true}))
         .map_err(|e| anyhow::anyhow!(e))?;
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -136,7 +136,7 @@ fn v2_remove_boundary_origin_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_v2_envelope()?;
     envelope.boundary_origin = None;
     let result = verify_envelope(&envelope)?;
-    assert!(result.status != vr_verifier::result::VerificationStatus::Valid);
+    assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())
 }
 
@@ -166,7 +166,7 @@ fn v1_same_payload_different_metadata_still_passes() -> Result<(), anyhow::Error
     tampered.context_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&tampered)?;
     assert!(
-        result.status == vr_verifier::result::VerificationStatus::Valid,
+        result.status == vertrule_verifier::result::VerificationStatus::Valid,
         "V1 does NOT protect metadata fields — this is the weakness V2 fixes"
     );
     Ok(())

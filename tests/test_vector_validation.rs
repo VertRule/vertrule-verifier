@@ -1,15 +1,15 @@
-//! Integration tests that validate the `vr-verifier` crate against the
+//! Integration tests that validate the `vertrule-verifier` crate against the
 //! generated protocol test vectors in `test-vectors/`.
 //!
 //! These tests load JSON fixtures produced by `examples/generate_test_vectors.rs`
 //! and verify that the verifier accepts valid vectors and rejects invalid ones
 //! with the correct error variant.
 
-use vr_verifier::chain::verify_chain;
-use vr_verifier::envelope::ReceiptEnvelope;
-use vr_verifier::envelope::{verify_algorithms, verify_envelope_version, verify_event_hash};
-use vr_verifier::error::VerifyError;
-use vr_verifier::result::VerificationStatus;
+use vertrule_verifier::chain::verify_chain;
+use vertrule_verifier::envelope::ReceiptEnvelope;
+use vertrule_verifier::envelope::{verify_algorithms, verify_envelope_version, verify_event_hash};
+use vertrule_verifier::error::VerifyError;
+use vertrule_verifier::result::VerificationStatus;
 
 macro_rules! vr_test {
     ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
@@ -176,7 +176,7 @@ vr_test!(
         // Version 99 is rejected at deserialization (SchemaVersion validates on
         // construction). The facade catches this and returns INVALID.
         let raw = load_raw("invalid_version")?;
-        let result = vr_verifier::verify_receipt(&raw);
+        let result = vertrule_verifier::verify_receipt(&raw);
         need(
             ok_when(result.status == VerificationStatus::Invalid),
             "unsupported version should produce INVALID",
@@ -285,7 +285,7 @@ vr_test!(
 vr_test!(
     fn facade_unknown_field_rejected() {
         let raw = load_raw("invalid_unknown_field")?;
-        let result = vr_verifier::verify_receipt(&raw);
+        let result = vertrule_verifier::verify_receipt(&raw);
         need(
             ok_when(result.status == VerificationStatus::Invalid),
             "unknown field should produce INVALID",
@@ -300,7 +300,7 @@ vr_test!(
 vr_test!(
     fn facade_missing_required_field_rejected() {
         let raw = load_raw("invalid_missing_required")?;
-        let result = vr_verifier::verify_receipt(&raw);
+        let result = vertrule_verifier::verify_receipt(&raw);
         need(
             ok_when(result.status == VerificationStatus::Invalid),
             "missing required field should produce INVALID",
@@ -320,7 +320,7 @@ vr_test!(
 vr_test!(
     fn facade_unknown_receipt_type_rejected() {
         let raw = load_raw("invalid_unknown_receipt_type")?;
-        let result = vr_verifier::verify_receipt(&raw);
+        let result = vertrule_verifier::verify_receipt(&raw);
         need(
             ok_when(result.status == VerificationStatus::Invalid),
             "unknown receipt type should produce INVALID",
@@ -344,7 +344,7 @@ vr_test!(
 vr_test!(
     fn valid_with_algorithms_accepted() {
         let raw = load_raw("valid_with_algorithms")?;
-        let result = vr_verifier::verify_receipt(&raw);
+        let result = vertrule_verifier::verify_receipt(&raw);
         need(
             ok_when(result.status == VerificationStatus::Valid),
             "envelope with matching algorithm declarations should pass",
@@ -394,7 +394,7 @@ vr_test!(
 vr_test!(
     fn facade_valid_single_receipt() {
         let raw = load_raw("valid_single_envelope")?;
-        let result = vr_verifier::verify_receipt(&raw);
+        let result = vertrule_verifier::verify_receipt(&raw);
         need(
             ok_when(result.status == VerificationStatus::Valid),
             "valid raw envelope should produce VALID",
@@ -407,7 +407,7 @@ vr_test!(
     fn facade_valid_signed_receipt() {
         let raw = load_raw("valid_signed")?;
         let sig = load_raw("valid_sig")?;
-        let result = vr_verifier::verify_signed_receipt(&raw, &sig);
+        let result = vertrule_verifier::verify_signed_receipt(&raw, &sig);
         need(
             ok_when(result.status == VerificationStatus::Valid),
             "validly signed receipt should produce VALID",
@@ -428,7 +428,7 @@ vr_test!(
     fn facade_invalid_signature_rejected() {
         let raw = load_raw("valid_signed")?;
         let sig = load_raw("invalid_sig")?;
-        let result = vr_verifier::verify_signed_receipt(&raw, &sig);
+        let result = vertrule_verifier::verify_signed_receipt(&raw, &sig);
         need(
             ok_when(result.status == VerificationStatus::Invalid),
             "corrupted signature should produce INVALID",

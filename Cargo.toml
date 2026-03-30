@@ -1,6 +1,6 @@
 [package]
 # Publish gate: requires vertrule-schemas and vr-jcs published first, plus WASM CI green.
-name = "vr-verifier"
+name = "vertrule-verifier"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"

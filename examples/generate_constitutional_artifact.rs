@@ -1,11 +1,11 @@
 //! Generate constitutional artifacts for all 6 constitutional crates.
 //!
 //! Produces one `ReceiptEnvelope` per crate, chained in layer order,
-//! then self-verifies every artifact using the `vr-verifier` facade API.
+//! then self-verifies every artifact using the `vertrule-verifier` facade API.
 //!
 //! Run with:
 //! ```bash
-//! cargo run --example generate_constitutional_artifact -p vr-verifier
+//! cargo run --example generate_constitutional_artifact -p vertrule-verifier
 //! ```
 
 use base64::Engine;
@@ -58,7 +58,7 @@ const CONSTITUTIONAL_CRATES: &[CrateSpec] = &[
         logical_time: 3000,
     },
     CrateSpec {
-        name: "vr-verifier",
+        name: "vertrule-verifier",
         source_rel: "vertrule-verifier",
         layer: 4,
         logical_time: 4000,
@@ -277,8 +277,8 @@ fn verify_artifacts(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         let env_bytes = std::fs::read(&env_path)?;
         let sig_bytes = std::fs::read(&sig_path)?;
 
-        let result = vr_verifier::verify_signed_receipt(&env_bytes, &sig_bytes);
-        if result.status != vr_verifier::result::VerificationStatus::Valid {
+        let result = vertrule_verifier::verify_signed_receipt(&env_bytes, &sig_bytes);
+        if result.status != vertrule_verifier::result::VerificationStatus::Valid {
             return Err(format!(
                 "signed receipt verification failed for {}: {:?}",
                 spec.name, result.errors
@@ -291,9 +291,9 @@ fn verify_artifacts(out_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Verify chain
     let chain_path = out_dir.join("chain.json");
     let chain_bytes = std::fs::read(&chain_path)?;
-    let result = vr_verifier::verify_receipt_chain(&chain_bytes);
+    let result = vertrule_verifier::verify_receipt_chain(&chain_bytes);
 
-    if result.status != vr_verifier::result::VerificationStatus::Valid {
+    if result.status != vertrule_verifier::result::VerificationStatus::Valid {
         return Err(format!("chain verification failed: {:?}", result.errors).into());
     }
 

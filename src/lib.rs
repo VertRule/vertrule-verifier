@@ -1,4 +1,4 @@
-//! # `vr-verifier` -- Public `VertRule` Receipt Verifier
+//! # `vertrule-verifier` -- Public `VertRule` Receipt Verifier
 //!
 //! This crate is the standalone, auditable verifier for `VertRule` receipt
 //! envelopes. It supports envelope versions V1 (payload-only commitment) and

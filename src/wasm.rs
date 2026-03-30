@@ -1,4 +1,4 @@
-//! WASM bindings for the `vr-verifier` public verification API.
+//! WASM bindings for the `vertrule-verifier` public verification API.
 //!
 //! Thin wrappers over the canonical verification functions.
 //! All verification semantics live in the core modules — this module

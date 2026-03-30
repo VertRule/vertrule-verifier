@@ -1,4 +1,4 @@
-//! Tests for `vr-verifier`.
+//! Tests for `vertrule-verifier`.
 //!
 //! Uses `vr_test!` from `vr-kernel-testutils` (zero runtime deps).
 

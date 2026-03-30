@@ -6,40 +6,40 @@
 #![deny(unused_imports)]
 
 // Verification entry points
-use vr_verifier::verify_receipt;
-use vr_verifier::verify_receipt_chain;
-use vr_verifier::verify_receipt_chain_with_limits;
-use vr_verifier::verify_receipt_with_limits;
-use vr_verifier::verify_signed_receipt;
-use vr_verifier::verify_signed_receipt_with_trust;
+use vertrule_verifier::verify_receipt;
+use vertrule_verifier::verify_receipt_chain;
+use vertrule_verifier::verify_receipt_chain_with_limits;
+use vertrule_verifier::verify_receipt_with_limits;
+use vertrule_verifier::verify_signed_receipt;
+use vertrule_verifier::verify_signed_receipt_with_trust;
 
 // Envelope integrity (re-homed from vertrule-schemas)
-use vr_verifier::validate_receipt_envelope_integrity;
+use vertrule_verifier::validate_receipt_envelope_integrity;
 
 // MRI payload validation
-use vr_verifier::validate_gradient_coupling_payload;
-use vr_verifier::validate_mri_batch_payload;
+use vertrule_verifier::validate_gradient_coupling_payload;
+use vertrule_verifier::validate_mri_batch_payload;
 
 // Result types
-use vr_verifier::result::VerificationResult;
-use vr_verifier::result::VerificationStatus;
+use vertrule_verifier::result::VerificationResult;
+use vertrule_verifier::result::VerificationStatus;
 
 // Error
-use vr_verifier::VerifyError;
+use vertrule_verifier::VerifyError;
 
 // Limits
-use vr_verifier::VerifierLimits;
+use vertrule_verifier::VerifierLimits;
 
 // Trust
-use vr_verifier::AuthoritySet;
-use vr_verifier::TrustPolicy;
-use vr_verifier::TrustStatus;
-use vr_verifier::TrustValidation;
+use vertrule_verifier::AuthoritySet;
+use vertrule_verifier::TrustPolicy;
+use vertrule_verifier::TrustStatus;
+use vertrule_verifier::TrustValidation;
 
 // Re-exports from schemas
-use vr_verifier::DigestBytes;
-use vr_verifier::ReceiptEnvelope;
-use vr_verifier::SchemaVersion;
+use vertrule_verifier::DigestBytes;
+use vertrule_verifier::ReceiptEnvelope;
+use vertrule_verifier::SchemaVersion;
 
 #[test]
 fn public_surface_symbols_are_usable() {

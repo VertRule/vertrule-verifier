@@ -1,6 +1,6 @@
 //! Dependency boundary enforcement test.
 //!
-//! Ensures that `vr-verifier` does not depend on any runtime crates.
+//! Ensures that `vertrule-verifier` does not depend on any runtime crates.
 //! This is the single most important architectural invariant of the crate:
 //! it must be auditable without trusting the runtime.
 

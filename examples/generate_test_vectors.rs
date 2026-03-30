@@ -1,4 +1,4 @@
-//! Generate protocol test vectors for `vr-verifier`.
+//! Generate protocol test vectors for `vertrule-verifier`.
 //!
 //! Produces JSON fixtures in `test-vectors/` that any verifier implementation
 //! can use to validate correctness. Each fixture computes BLAKE3 hashes over
@@ -6,7 +6,7 @@
 //!
 //! Run with:
 //! ```bash
-//! cargo run --example generate_test_vectors -p vr-verifier
+//! cargo run --example generate_test_vectors -p vertrule-verifier
 //! ```
 
 use base64::Engine;

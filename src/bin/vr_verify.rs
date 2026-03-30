@@ -14,7 +14,7 @@
 
 use std::process::ExitCode;
 
-use vr_verifier::result::VerificationStatus;
+use vertrule_verifier::result::VerificationStatus;
 
 const USAGE: &str = "\
 Usage:
@@ -79,7 +79,7 @@ fn run_receipt(path: &str) -> ExitCode {
         }
     };
 
-    let result = vr_verifier::verify_receipt(&raw_bytes);
+    let result = vertrule_verifier::verify_receipt(&raw_bytes);
     emit_result(&result)
 }
 
@@ -92,7 +92,7 @@ fn run_chain(path: &str) -> ExitCode {
         }
     };
 
-    let result = vr_verifier::verify_receipt_chain(&raw_bytes);
+    let result = vertrule_verifier::verify_receipt_chain(&raw_bytes);
     emit_result(&result)
 }
 
@@ -113,11 +113,11 @@ fn run_signed(receipt_path: &str, sig_path: &str) -> ExitCode {
         }
     };
 
-    let result = vr_verifier::verify_signed_receipt(&raw_bytes, &sig_bytes);
+    let result = vertrule_verifier::verify_signed_receipt(&raw_bytes, &sig_bytes);
     emit_result(&result)
 }
 
-fn emit_result(result: &vr_verifier::result::VerificationResult) -> ExitCode {
+fn emit_result(result: &vertrule_verifier::result::VerificationResult) -> ExitCode {
     // Stdout: JCS-canonical result JSON
     match serde_json::to_value(result) {
         Ok(value) => match vr_jcs::to_canon_bytes(&value) {
