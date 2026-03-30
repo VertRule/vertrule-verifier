@@ -1,7 +1,7 @@
-# Known nondeterminism in vr-verifier
+# Known nondeterminism in vertrule-verifier
 # Stage 0: Progressive hardening
 #
-# vr-verifier implements independent receipt verification.
+# vertrule-verifier implements independent receipt verification.
 # No known sources of nondeterminism.
 
 # [items]

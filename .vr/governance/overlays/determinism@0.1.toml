@@ -1,4 +1,4 @@
-# Determinism policy scope for vr-verifier
+# Determinism policy scope for vertrule-verifier
 # Layer 4: Verification — must recompute independently, byte-deterministic
 
 [scope]

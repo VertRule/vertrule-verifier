@@ -1,4 +1,4 @@
-# `vr-verifier`
+# `vertrule-verifier`
 
 Standalone public verifier for VertRule receipt envelopes.
 
@@ -7,7 +7,7 @@ signatures without importing the private runtime crates that produce receipts.
 
 ## What the Verifier Does
 
-`vr-verifier` answers one question: **is this receipt envelope (or chain)
+`vertrule-verifier` answers one question: **is this receipt envelope (or chain)
 structurally valid and cryptographically consistent?**
 
 It verifies:

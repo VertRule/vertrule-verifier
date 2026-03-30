@@ -1,15 +1,15 @@
-# Per-crate governance manifest for vr-verifier
+# Per-crate governance manifest for vertrule-verifier
 # Independent receipt verification
 
 [crate]
-name = "vr-verifier"
+name = "vertrule-verifier"
 version = "0.1.0"
-publish = false
-extraction_ready = false
+publish = true
+extraction_ready = true
 
 [dependencies.constitutional]
 vertrule-schemas = "0.1.0"
-vr-jcs = "0.1.0"
+vr-jcs = "0.2.0"
 
 [stage]
 current = 0
