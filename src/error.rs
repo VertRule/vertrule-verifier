@@ -177,4 +177,11 @@ pub enum VerifyError {
     /// A configurable resource limit was exceeded.
     #[error("limit exceeded: {0}")]
     LimitExceeded(#[from] crate::limits::LimitViolation),
+
+    /// Payload shape constraint violated (e.g., vector length vs `batch_len`).
+    #[error("payload shape mismatch: {reason}")]
+    PayloadShapeMismatch {
+        /// What shape constraint was violated.
+        reason: String,
+    },
 }
