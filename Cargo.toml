@@ -12,7 +12,7 @@ exclude = [
     ".github/**",
     "tooling/**",
     "memory/**",
-    "governance-profile-v1.json",
+    "examples/generate_constitutional_artifact.rs",
     "PUBLIC_SURFACE.md",
     "RELEASE.md",
     "justfile",

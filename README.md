@@ -23,7 +23,8 @@ It verifies:
 - **Context and policy consistency** -- uniform `context_digest` and
   `policy_digest` across a chain
 - **Duplicate detection** -- no repeated `event_hash` values in a chain
-- **Ed25519 signature verification** with `VertRule-Receipt-v1` domain separation
+- **Ed25519 signature verification** with `VR-ReceiptDigest|v1|` / `VR-ReceiptSig|v1|`
+  domain separation
 - **Deterministic result output** as JCS-canonical JSON with BLAKE3 result digest
 
 ## What the Verifier Does Not Do
