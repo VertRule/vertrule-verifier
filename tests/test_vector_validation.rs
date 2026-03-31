@@ -15,15 +15,9 @@ macro_rules! vr_test {
     ( $(#[$meta:meta])* fn $name:ident() $body:block ) => {
         $(#[$meta])*
         #[test]
-        fn $name() {
-            #[allow(clippy::redundant_closure_call)]
-            let res: anyhow::Result<()> = (|| {
-                $body
-                Ok(())
-            })();
-            if let Err(e) = res {
-                panic!("{e}");
-            }
+        fn $name() -> anyhow::Result<()> {
+            $body
+            Ok(())
         }
     };
 }
