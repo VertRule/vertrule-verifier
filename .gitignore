@@ -1,2 +1,5 @@
 /target
 .vr/tmp/
+.DS_Store
+operator_private/
+.claude/settings.local.json
