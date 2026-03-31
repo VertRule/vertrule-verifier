@@ -16,7 +16,7 @@ const fn zero_digest() -> DigestBytes {
 fn make_valid_envelope() -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload = CanonicalPayload::new(serde_json::json!({
         "action": "test",
-        "domain": "v2.tamper.tests",
+        "domain": "envelope.tamper.tests",
         "value": 42
     }))
     .map_err(|e| anyhow::anyhow!(e))?;
@@ -47,19 +47,19 @@ fn verify_envelope(
 }
 
 #[test]
-fn v2_valid_envelope_passes() -> Result<(), anyhow::Error> {
+fn envelope_valid_envelope_passes() -> Result<(), anyhow::Error> {
     let envelope = make_valid_envelope()?;
     let result = verify_envelope(&envelope)?;
     assert!(
         result.status == vertrule_verifier::result::VerificationStatus::Valid,
-        "valid V2 envelope should pass: {:?}",
+        "valid envelope should pass: {:?}",
         result.errors
     );
     Ok(())
 }
 
 #[test]
-fn v2_tamper_receipt_type_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_receipt_type_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.receipt_type = ReceiptType::Mri;
     let result = verify_envelope(&envelope)?;
@@ -68,7 +68,7 @@ fn v2_tamper_receipt_type_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_context_digest_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_context_digest_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.context_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&envelope)?;
@@ -77,7 +77,7 @@ fn v2_tamper_context_digest_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_schema_digest_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_schema_digest_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.schema_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&envelope)?;
@@ -86,7 +86,7 @@ fn v2_tamper_schema_digest_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_policy_digest_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_policy_digest_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.policy_digest = DigestBytes::from_array([0xff; 32]);
     let result = verify_envelope(&envelope)?;
@@ -95,7 +95,7 @@ fn v2_tamper_policy_digest_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_logical_time_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_logical_time_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.logical_time = IJsonUInt::new(9999)?;
     let result = verify_envelope(&envelope)?;
@@ -104,7 +104,7 @@ fn v2_tamper_logical_time_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_parent_id_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_parent_id_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.parent_id = Some(DigestBytes::from_array([0xdd; 32]));
     let result = verify_envelope(&envelope)?;
@@ -113,7 +113,7 @@ fn v2_tamper_parent_id_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_boundary_origin_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_boundary_origin_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.boundary_origin = Some(BoundaryOrigin::Adapter);
     let result = verify_envelope(&envelope)?;
@@ -122,7 +122,7 @@ fn v2_tamper_boundary_origin_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_tamper_payload_fails() -> Result<(), anyhow::Error> {
+fn envelope_tamper_payload_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.payload = CanonicalPayload::new(serde_json::json!({"tampered": true}))
         .map_err(|e| anyhow::anyhow!(e))?;
@@ -132,7 +132,7 @@ fn v2_tamper_payload_fails() -> Result<(), anyhow::Error> {
 }
 
 #[test]
-fn v2_remove_boundary_origin_fails() -> Result<(), anyhow::Error> {
+fn envelope_remove_boundary_origin_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
     envelope.boundary_origin = None;
     let result = verify_envelope(&envelope)?;
