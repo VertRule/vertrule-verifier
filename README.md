@@ -1,5 +1,7 @@
 # `vertrule-verifier`
 
+![Local CI](artifacts/local-ci-badge.svg)
+
 Standalone public verifier for VertRule receipt envelopes.
 
 This crate verifies receipt structure, digest integrity, chain linkage, and
@@ -111,7 +113,7 @@ release or merge:
 
 1. Run `just verify-local` -- this executes build, test, clippy, format
    check, and vector regeneration in sequence
-2. Confirm all tests pass with zero warnings
+2. Confirm local CI passes with zero warnings (`just local-ci`)
 3. Verify test vectors are up to date (`just vectors` should produce no diff)
 4. Review that `governance-profile-v1.json` matches the code constants
    (the `test_governance_profile_matches_constants` test enforces this)

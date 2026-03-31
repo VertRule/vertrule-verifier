@@ -23,6 +23,19 @@ check: build test clippy fmt-check
 vectors:
     cargo run --example generate_test_vectors
 
+# Run local CI gate and update badge
+local-ci:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if just verify-local; then
+        tooling/gen-badge.sh passing artifacts/local-ci-badge.svg
+        echo "Local CI: PASSING"
+    else
+        tooling/gen-badge.sh failing artifacts/local-ci-badge.svg
+        echo "Local CI: FAILING" >&2
+        exit 1
+    fi
+
 # Full release verification sequence
 verify-local: check vectors test
     @echo "Local verification complete."
