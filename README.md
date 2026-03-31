@@ -12,11 +12,12 @@ structurally valid and cryptographically consistent?**
 
 It verifies:
 
-- **Envelope version** compatibility (v1 and v2 supported)
+- **Envelope version** compatibility (v1 only)
 - **Schema/profile conformance** -- strict field set, known receipt types,
   known boundary origins, unknown-field rejection
 - **JCS canonicalization** (RFC 8785) -- input must already be canonical
-- **`event_hash` integrity** -- BLAKE3 digest recomputed over canonical payload
+- **`event_hash` integrity** -- BLAKE3 digest recomputed over the full envelope
+  (all trust-bearing fields)
 - **Chain parent linkage** via `parent_id` / `event_hash` binding
 - **Monotonic `logical_time`** across chain elements
 - **Context and policy consistency** -- uniform `context_digest` and
@@ -143,9 +144,8 @@ v1 envelope schema. A sync test ensures the profile and code constants match.
 
 ## Known Limitations
 
-- `SchemaVersion::V1` and `V2` are supported (both BLAKE3 + JCS).
-  V1 commits payload only; V2 commits all trust-bearing fields
-  (full-envelope commitment).
+- Only `SchemaVersion::V1` is supported (BLAKE3 + JCS, full-envelope
+  commitment covering all trust-bearing fields).
 - `signature_validation.present` indicates whether a signature bundle
   was supplied, regardless of parse success. Malformed bundles count
   as present; validity is separate.
