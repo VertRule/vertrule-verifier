@@ -80,7 +80,7 @@ vr-verify chain examples/sample_chain.json
 vr-verify signed receipt.json signature.json
 ```
 
-Exit codes: `0` = VALID, `1` = INVALID, `2` = usage error.
+Exit codes: `0` = VALID, `1` = INVALID or UNSIGNED, `2` = usage error.
 
 Output: JCS-canonical verification result to stdout, result digest to stderr.
 
