@@ -18,9 +18,8 @@ dependencies — does not import the private execution stack.
 
 ## Key decisions
 
-- **V1 and V2 supported**: V1 commits payload only
-  (`BLAKE3(JCS(payload))`); V2 commits all trust-bearing fields
-  (`BLAKE3(JCS(envelope \ {event_hash}))`).
+- **V1 only**: full-envelope commitment
+  (`BLAKE3(JCS(envelope \ {event_hash}))`) covering all trust-bearing fields.
 - **Direct `vr-jcs` dependency**: canonicalization imported from `vr-jcs`
   directly, not through `vertrule-schemas`.
 - **`signature_validation.present` semantics**: indicates whether a
