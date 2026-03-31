@@ -1,13 +1,12 @@
-# vertrule-verifier Public Surface (v0.1)
+# vertrule-verifier Public Surface (v0.2)
 
 Standalone public verifier for VertRule receipt envelopes.
 Judgment over public artifacts — no receipt production, no signing,
 no runtime execution.
 
-## Supported Envelope Versions
+## Supported Envelope Version
 
-- **V1**: `event_hash` = `BLAKE3(JCS(payload))` — payload-only commitment
-- **V2**: `event_hash` = `BLAKE3(JCS(envelope \ {event_hash}))` — full-envelope commitment
+- **V1**: `event_hash` = `BLAKE3(JCS(envelope \ {event_hash}))` — full-envelope commitment
 
 ## Stable Root Exports
 
