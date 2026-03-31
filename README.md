@@ -111,7 +111,7 @@ release or merge:
 
 1. Run `just verify-local` -- this executes build, test, clippy, format
    check, and vector regeneration in sequence
-2. Confirm all 77+ tests pass with zero warnings
+2. Confirm all tests pass with zero warnings
 3. Verify test vectors are up to date (`just vectors` should produce no diff)
 4. Review that `governance-profile-v1.json` matches the code constants
    (the `test_governance_profile_matches_constants` test enforces this)
