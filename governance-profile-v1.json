@@ -4,25 +4,24 @@
   "unknown_field_policy": "FAIL",
   "missing_field_policy": "FAIL",
   "additional_properties": false,
-  "supported_envelope_versions": [1, 2],
+  "supported_envelope_versions": [1],
   "identity_triple": {
     "spec_version": 1,
     "canonicalization": "JCS",
     "commitment_primitive": "BLAKE3"
   },
   "commitment_scope": {
-    "v1": "payload_only",
-    "v2": "full_envelope_sans_event_hash"
+    "v1": "full_envelope_sans_event_hash"
   },
   "envelope": {
     "required_fields": [
-      { "name": "envelope_version", "type": "u32", "description": "Schema version (1 or 2)" },
+      { "name": "envelope_version", "type": "u32", "description": "Schema version (1)" },
       { "name": "receipt_type", "type": "string", "description": "Discriminator from known set (lowercase only)" },
       { "name": "context_digest", "type": "digest_hex", "description": "Digest of governance context" },
       { "name": "schema_digest", "type": "digest_hex", "description": "Digest of schema used" },
       { "name": "policy_digest", "type": "digest_hex", "description": "Digest of active policy" },
       { "name": "logical_time", "type": "u64", "description": "Monotonically increasing clock" },
-      { "name": "event_hash", "type": "digest_hex", "description": "Commitment digest (V1: payload, V2: all fields)" },
+      { "name": "event_hash", "type": "digest_hex", "description": "Commitment digest (full envelope sans event_hash)" },
       { "name": "payload", "type": "object", "description": "Domain-specific receipt data (float-free)" }
     ],
     "optional_fields": [
