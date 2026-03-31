@@ -6,6 +6,16 @@ edition = "2021"
 license = "Apache-2.0"
 description = "Public-facing verifier for VertRule receipt envelopes -- zero runtime deps"
 repository = "https://github.com/VertRule/vertrule-verifier"
+exclude = [
+    ".vr/**",
+    ".github/**",
+    "tooling/**",
+    "memory/**",
+    "governance-profile-v1.json",
+    "PUBLIC_SURFACE.md",
+    "RELEASE.md",
+    "justfile",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
