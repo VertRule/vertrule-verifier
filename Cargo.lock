@@ -459,9 +459,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vertrule-schemas"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43b1dd9082954b7ee9cafdf8292f8c737472fc38f5e624e1cc8b4c06d8f347ef"
+checksum = "ec01ffae8b7d64cecd6ae3e1f9aa35253842c9d06b4aa2d4cbe5b94bc2e0de6f"
 dependencies = [
  "blake3",
  "hex",

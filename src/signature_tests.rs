@@ -25,31 +25,29 @@ fn zero_digest() -> DigestBytes {
     DigestBytes::from_array([0u8; 32])
 }
 
-/// Build a V1 test envelope from a payload JSON value.
-fn make_v1_test_envelope(
-    payload_json: serde_json::Value,
-) -> Result<ReceiptEnvelope, anyhow::Error> {
+/// Build a test envelope from a payload JSON value.
+fn make_test_envelope(payload_json: serde_json::Value) -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload =
         CanonicalPayload::new(payload_json).map_err(|e| anyhow::anyhow!("payload: {e}"))?;
-    let canon_bytes =
-        vr_jcs::to_canon_bytes(payload.as_value()).map_err(|e| anyhow::anyhow!("canon: {e}"))?;
-    let event_hash = DigestBytes::from_array(*blake3::hash(&canon_bytes).as_bytes());
     let logical_time = IJsonUInt::new(1).map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
 
-    Ok(ReceiptEnvelope {
+    let mut envelope = ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
         receipt_type: ReceiptType::Event,
         context_digest: zero_digest(),
         schema_digest: zero_digest(),
         policy_digest: zero_digest(),
         logical_time,
-        event_hash,
+        event_hash: zero_digest(), // placeholder
         parent_id: None,
         boundary_origin: None,
         digest_algorithm: None,
         canonicalization: None,
         payload,
-    })
+    };
+    envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)
+        .map_err(|e| anyhow::anyhow!("event_hash: {e}"))?;
+    Ok(envelope)
 }
 
 /// Sign an envelope and return a complete `SignatureBundle` JSON value.
@@ -80,9 +78,8 @@ fn sign_envelope(
 
 vr_test!(
     fn test_valid_signature_verifies() {
-        let envelope = make_v1_test_envelope(
-            serde_json::json!({"action": "governance_change", "version": 1}),
-        )?;
+        let envelope =
+            make_test_envelope(serde_json::json!({"action": "governance_change", "version": 1}))?;
         let timestamp = "2026-02-23T12:00:00Z";
         let bundle_json = sign_envelope(&envelope, timestamp)?;
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
@@ -95,18 +92,16 @@ vr_test!(
 
 vr_test!(
     fn test_tampered_payload_fails() {
-        let envelope = make_v1_test_envelope(
-            serde_json::json!({"action": "governance_change", "version": 1}),
-        )?;
+        let envelope =
+            make_test_envelope(serde_json::json!({"action": "governance_change", "version": 1}))?;
         let timestamp = "2026-02-23T12:00:00Z";
         let bundle_json = sign_envelope(&envelope, timestamp)?;
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
 
         // Create a different envelope (tampered payload)
-        let tampered = make_v1_test_envelope(
-            serde_json::json!({"action": "governance_change", "version": 2}),
-        )?;
+        let tampered =
+            make_test_envelope(serde_json::json!({"action": "governance_change", "version": 2}))?;
         let result = verify_signature(&tampered, &bundle);
         match result {
             Err(VerifyError::SignatureInvalid { .. }) => {}
@@ -128,7 +123,7 @@ vr_test!(
         });
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
-        let envelope = make_v1_test_envelope(serde_json::json!({}))?;
+        let envelope = make_test_envelope(serde_json::json!({}))?;
         let result = verify_signature(&envelope, &bundle);
         match result {
             Err(VerifyError::SignatureDataMalformed { reason }) => {
@@ -141,7 +136,7 @@ vr_test!(
 
 vr_test!(
     fn test_wrong_key_id_rejected() {
-        let envelope = make_v1_test_envelope(serde_json::json!({"action": "test"}))?;
+        let envelope = make_test_envelope(serde_json::json!({"action": "test"}))?;
         let timestamp = "2026-02-23T12:00:00Z";
         let mut bundle_json = sign_envelope(&envelope, timestamp)?;
 
@@ -164,7 +159,7 @@ vr_test!(
 
 vr_test!(
     fn test_receipt_digest_has_domain_separation() {
-        let envelope = make_v1_test_envelope(serde_json::json!({"key": "value"}))?;
+        let envelope = make_test_envelope(serde_json::json!({"key": "value"}))?;
 
         // Compute domain-separated digest (with prefix)
         let receipt_digest = compute_receipt_digest(&envelope)?;
@@ -182,7 +177,7 @@ vr_test!(
 
 vr_test!(
     fn test_receipt_digest_is_deterministic() {
-        let envelope = make_v1_test_envelope(serde_json::json!({"key": "value"}))?;
+        let envelope = make_test_envelope(serde_json::json!({"key": "value"}))?;
         let d1 = compute_receipt_digest(&envelope)?;
         let d2 = compute_receipt_digest(&envelope)?;
         assert_eq!(d1, d2);
@@ -202,7 +197,7 @@ vr_test!(
         });
         let bundle: SignatureBundle = serde_json::from_value(bundle_json)
             .map_err(|e| anyhow::anyhow!("deserialize bundle: {e}"))?;
-        let envelope = make_v1_test_envelope(serde_json::json!({}))?;
+        let envelope = make_test_envelope(serde_json::json!({}))?;
         let result = verify_signature(&envelope, &bundle);
         match result {
             Err(VerifyError::SignatureDataMalformed { .. }) => {}

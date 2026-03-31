@@ -1,32 +1,32 @@
 {
+  "description": "Chain with duplicate event_hash (forced). Verifier must reject.",
+  "expected_result": "fail",
+  "expected_error": "DuplicateEventHash",
   "data": [
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "e6e09b1aad4c0e4cbccbf714c82e685c7158ea36b66272571cb348cdb4b4c05e",
+      "receipt_type": "event",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "logical_time": 100,
       "payload": {
         "action": "duplicate"
       },
-      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "event",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "event_hash": "0a45be7364bb532c4b9fde0110b08ee84fdc60680403c67344b2be45afc9ee31"
     },
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "e6e09b1aad4c0e4cbccbf714c82e685c7158ea36b66272571cb348cdb4b4c05e",
+      "receipt_type": "event",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "logical_time": 200,
-      "parent_id": "e6e09b1aad4c0e4cbccbf714c82e685c7158ea36b66272571cb348cdb4b4c05e",
       "payload": {
         "action": "duplicate"
       },
-      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "event",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "parent_id": "0a45be7364bb532c4b9fde0110b08ee84fdc60680403c67344b2be45afc9ee31",
+      "event_hash": "0a45be7364bb532c4b9fde0110b08ee84fdc60680403c67344b2be45afc9ee31"
     }
-  ],
-  "description": "Chain with duplicate event_hash (same payload in both envelopes). Verifier must reject.",
-  "expected_error": "DuplicateEventHash",
-  "expected_result": "fail"
+  ]
 }

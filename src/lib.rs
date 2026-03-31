@@ -1,8 +1,7 @@
 //! # `vertrule-verifier` -- Public `VertRule` Receipt Verifier
 //!
 //! This crate is the standalone, auditable verifier for `VertRule` receipt
-//! envelopes. It supports envelope versions V1 (payload-only commitment) and
-//! V2 (full-envelope commitment), both using BLAKE3 + JCS. It intentionally
+//! envelopes. It verifies full-envelope commitment (BLAKE3 + JCS). It intentionally
 //! carries **zero** runtime imports: it does not depend on `vertrule-core`,
 //! `vertrule-app`, `vertrule-adapters`, or any other runtime crate.
 //!

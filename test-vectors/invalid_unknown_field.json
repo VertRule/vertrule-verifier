@@ -1,18 +1,18 @@
 {
+  "description": "Envelope with unrecognized field 'bogus_field'. Verifier must reject.",
+  "expected_result": "fail",
+  "expected_error": "UnknownField",
   "data": {
-    "bogus_field": 42,
-    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "envelope_version": 1,
-    "event_hash": "7847b5eba1f348c972f3c2e1b4df2ef7b0c1fedd1b0ee33ad386e963bad9271c",
+    "receipt_type": "governance",
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "logical_time": 1000,
     "payload": {
       "action": "test"
     },
-    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "governance",
-    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  "description": "Envelope with unrecognized field 'bogus_field'. Verifier must reject.",
-  "expected_error": "UnknownField",
-  "expected_result": "fail"
+    "event_hash": "710c175bbffddbca7605cfd05706d1d628d48e92ac679ec7c8ece6c073088820",
+    "bogus_field": 42
+  }
 }

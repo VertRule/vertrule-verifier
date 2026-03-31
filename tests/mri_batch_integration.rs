@@ -49,25 +49,25 @@ fn envelope_from_batch_payload(
 ) -> Result<ReceiptEnvelope, Box<dyn std::error::Error>> {
     let payload_value = serde_json::to_value(payload)?;
     let canonical = CanonicalPayload::new(payload_value)?;
-    let canon_bytes = vr_jcs::to_canon_bytes(canonical.as_value())?;
-    let event_hash = DigestBytes::from_array(*blake3::hash(&canon_bytes).as_bytes());
     let zero = DigestBytes::from_array([0u8; 32]);
     let logical_time = IJsonUInt::new(1)?;
 
-    Ok(ReceiptEnvelope {
+    let mut envelope = ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
         receipt_type: ReceiptType::Mri,
         context_digest: zero,
         schema_digest: zero,
         policy_digest: zero,
         logical_time,
-        event_hash,
+        event_hash: zero, // placeholder
         parent_id: None,
         boundary_origin: Some(BoundaryOrigin::Engine),
         digest_algorithm: None,
         canonicalization: None,
         payload: canonical,
-    })
+    };
+    envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)?;
+    Ok(envelope)
 }
 
 // ---------------------------------------------------------------------------

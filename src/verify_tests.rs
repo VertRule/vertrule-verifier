@@ -10,18 +10,13 @@ fn build_envelope_value(
     parent_id: Option<&str>,
     payload: serde_json::Value,
 ) -> Result<(serde_json::Value, String), anyhow::Error> {
-    let payload_canon = vr_jcs::to_canon_bytes(&payload)
-        .map_err(|e| anyhow::anyhow!("payload canonicalization: {e}"))?;
-    let hash = blake3::hash(&payload_canon);
-    let event_hash = hex::encode(hash.as_bytes());
-
+    // Build the envelope without event_hash first
     let mut obj = serde_json::Map::new();
     obj.insert(
         "context_digest".to_string(),
         serde_json::json!("a".repeat(64)),
     );
     obj.insert("envelope_version".to_string(), serde_json::json!(1));
-    obj.insert("event_hash".to_string(), serde_json::json!(&event_hash));
     obj.insert("logical_time".to_string(), serde_json::json!(logical_time));
     if let Some(pid) = parent_id {
         obj.insert("parent_id".to_string(), serde_json::json!(pid));
@@ -36,6 +31,14 @@ fn build_envelope_value(
         "schema_digest".to_string(),
         serde_json::json!("b".repeat(64)),
     );
+
+    // Compute full-envelope hash (all fields except event_hash)
+    let canon_bytes = vr_jcs::to_canon_bytes(&serde_json::Value::Object(obj.clone()))
+        .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+    let hash = blake3::hash(&canon_bytes);
+    let event_hash = hex::encode(hash.as_bytes());
+
+    obj.insert("event_hash".to_string(), serde_json::json!(&event_hash));
 
     Ok((serde_json::Value::Object(obj), event_hash))
 }

@@ -447,19 +447,19 @@ vr_test!(
 
 vr_test!(
     fn event_hash_is_deterministic_across_runs() {
-        let payload = serde_json::json!({
-            "domain": "test.governance.v1",
-            "action": "create",
-            "value": 42
-        });
-        let canon_bytes = vr_jcs::to_canon_bytes(&payload).map_err(|e| anyhow::anyhow!("{e}"))?;
-        let computed = hex::encode(blake3::hash(&canon_bytes).as_bytes());
-
         let vector = load_vector("valid_single_envelope")?;
         let stored = need(
             vector["data"]["event_hash"].as_str(),
             "vector should contain event_hash",
         )?;
+
+        // Rebuild the envelope without event_hash and compute the commitment
+        let mut data = vector["data"].clone();
+        if let serde_json::Value::Object(ref mut map) = data {
+            map.remove("event_hash");
+        }
+        let canon_bytes = vr_jcs::to_canon_bytes(&data).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let computed = hex::encode(blake3::hash(&canon_bytes).as_bytes());
 
         need(
             ok_when(computed == stored),

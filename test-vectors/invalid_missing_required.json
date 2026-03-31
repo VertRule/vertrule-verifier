@@ -1,16 +1,16 @@
 {
+  "description": "Envelope missing required field 'event_hash'. Verifier must reject.",
+  "expected_result": "fail",
+  "expected_error": "MissingRequiredField",
   "data": {
-    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "envelope_version": 1,
+    "receipt_type": "governance",
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "logical_time": 1000,
     "payload": {
       "action": "test"
-    },
-    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "governance",
-    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  "description": "Envelope missing required field 'event_hash'. Verifier must reject.",
-  "expected_error": "MissingRequiredField",
-  "expected_result": "fail"
+    }
+  }
 }

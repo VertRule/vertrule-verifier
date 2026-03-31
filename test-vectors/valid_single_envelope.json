@@ -1,18 +1,18 @@
 {
+  "description": "Single valid envelope with correct event_hash (full-envelope commitment).",
+  "expected_result": "pass",
   "data": {
-    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "envelope_version": 1,
-    "event_hash": "91cc7c90cf66ac32c27e5684abfcfc911adc561038370e4d5b8238920be0c546",
+    "receipt_type": "governance",
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "logical_time": 1000,
     "payload": {
-      "action": "create",
       "domain": "test.governance.v1",
+      "action": "create",
       "value": 42
     },
-    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "governance",
-    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  "description": "Single valid envelope with correct event_hash (BLAKE3 of JCS-canonical payload).",
-  "expected_result": "pass"
+    "event_hash": "3dfd4573cd95198eff163d080ce489ddc5f88df7d4f5b10fbaa9b136d998412e"
+  }
 }

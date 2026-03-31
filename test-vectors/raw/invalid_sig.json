@@ -1,9 +1,9 @@
 {
   "alg": "Ed25519",
-  "digest_basis": "BLAKE3+JCS",
   "key_id": "863f6c8abba37da850375c08",
   "public_key_b64": "GX9rI+FshTLGq8g4+s1ep4m+DHaykgM0A5v6iz02jWE=",
+  "signature_b64": "uawgMkDRmGl1LW7Diw+0mhN1XpbLDyd5PWtwMo3RXKugcL6xy2ksrJa3BGzcyDtT3I2oAYfsIJ9wJMUjyDvFBA==",
   "schema_version": "0.2",
-  "signature_b64": "zGNFgcY3VSopziXlbIxd/M84Fzge4CtkEhxrp1Am9m6zvpnuJhTx+UYhVyxNc0pjrmzAN9oDFJKVaM/y65dcCg==",
+  "digest_basis": "BLAKE3+JCS",
   "timestamp": "2026-02-23T12:00:00Z"
 }

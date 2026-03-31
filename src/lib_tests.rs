@@ -15,37 +15,32 @@ use vertrule_schemas::{DigestBytes, IJsonUInt, ReceiptType, SchemaVersion};
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Compute a BLAKE3 digest over the JCS-canonical form of a `serde_json::Value`.
-fn canon_hash(value: &serde_json::Value) -> Result<DigestBytes, VerifyError> {
-    let bytes = vr_jcs::to_canon_bytes(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    let hash = blake3::hash(&bytes);
-    Ok(DigestBytes::from_array(*hash.as_bytes()))
-}
-
 /// Build a minimal valid `ReceiptEnvelope`.
 fn make_envelope(
     payload: serde_json::Value,
     logical_time: u64,
     parent_id: Option<DigestBytes>,
 ) -> anyhow::Result<ReceiptEnvelope> {
-    let event_hash = canon_hash(&payload)?;
     let filler = DigestBytes::from_array([0u8; 32]);
     let canonical = CanonicalPayload::new(payload).map_err(|e| anyhow::anyhow!(e))?;
     let lt = IJsonUInt::new(logical_time).map_err(|e| anyhow::anyhow!(e))?;
-    Ok(ReceiptEnvelope {
+    let mut envelope = ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
         receipt_type: ReceiptType::Governance,
         context_digest: filler,
         schema_digest: filler,
         policy_digest: filler,
         logical_time: lt,
-        event_hash,
+        event_hash: filler, // placeholder
         parent_id,
         boundary_origin: None,
         digest_algorithm: None,
         canonicalization: None,
         payload: canonical,
-    })
+    };
+    envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(envelope)
 }
 
 // ---------------------------------------------------------------------------

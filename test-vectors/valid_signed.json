@@ -1,18 +1,18 @@
 {
+  "description": "Valid envelope with Ed25519 signature bundle.",
+  "expected_result": "pass",
   "data": {
-    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "envelope_version": 1,
-    "event_hash": "933b9c8cc0dc80843984433aba35bee92b5efcbb991763103996ce004b6bb4b9",
+    "receipt_type": "governance",
+    "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "logical_time": 1000,
     "payload": {
-      "action": "signed_change",
       "domain": "test.governance.v1",
+      "action": "signed_change",
       "version": 1
     },
-    "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "receipt_type": "governance",
-    "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  "description": "Valid envelope with Ed25519 signature bundle.",
-  "expected_result": "pass"
+    "event_hash": "52ea589cab711bfd08d9f06b1ec4bba2866b299a743c266a641acc47b6049dd3"
+  }
 }

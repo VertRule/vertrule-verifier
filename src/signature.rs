@@ -5,7 +5,7 @@
 //!
 //! ## Domain Separation
 //!
-//! - `receipt_digest` = `BLAKE3(b"VR-ReceiptDigest|v1|" || JCS(payload))`
+//! - `receipt_digest` = `BLAKE3(b"VR-ReceiptDigest|v1|" || JCS(envelope \ {event_hash}))`
 //! - `canonical_message` = `b"VR-ReceiptSig|v1|" || receipt_digest_hex || b"|" || timestamp`
 //! - Ed25519 signature is over `canonical_message`
 
@@ -135,11 +135,8 @@ pub struct SignatureBundle {
 
 /// Compute the domain-separated receipt digest.
 ///
-/// - **V1**: `BLAKE3(prefix || JCS(payload))`
-/// - **V2**: `BLAKE3(prefix || JCS(envelope \ {event_hash}))`
-///
-/// For V2, the digest covers all trust-bearing fields, matching the
-/// commitment scope of `event_hash`.
+/// `BLAKE3(prefix || JCS(envelope \ {event_hash}))` — the digest covers
+/// all trust-bearing fields, matching the commitment scope of `event_hash`.
 ///
 /// # Errors
 ///
@@ -147,19 +144,13 @@ pub struct SignatureBundle {
 pub fn compute_receipt_digest(
     envelope: &vertrule_schemas::ReceiptEnvelope,
 ) -> Result<DigestBytes, VerifyError> {
-    let canon_bytes = if envelope.envelope_version.commits_full_envelope() {
-        // V2: hash the full envelope minus event_hash
-        let mut value =
-            serde_json::to_value(envelope).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-        if let serde_json::Value::Object(ref mut map) = value {
-            map.remove("event_hash");
-        }
-        vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?
-    } else {
-        // V1: hash payload only
-        vr_jcs::to_canon_bytes(envelope.payload.as_value())
-            .map_err(|e| VerifyError::Canon(format!("{e}")))?
-    };
+    let mut value =
+        serde_json::to_value(envelope).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    if let serde_json::Value::Object(ref mut map) = value {
+        map.remove("event_hash");
+    }
+    let canon_bytes =
+        vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
 
     let mut hasher = blake3::Hasher::new();
     hasher.update(RECEIPT_PREFIX);
@@ -196,7 +187,7 @@ pub fn verify_signature(
     // 3. Verify key ID
     validate_key_id_matches(&verifying_key, &bundle.key_id)?;
 
-    // 4. Compute receipt digest (version-aware: V1=payload, V2=full envelope)
+    // 4. Compute receipt digest (full-envelope commitment)
     let receipt_digest = compute_receipt_digest(envelope)?;
 
     // 5. Construct canonical message

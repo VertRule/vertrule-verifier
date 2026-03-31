@@ -11,29 +11,30 @@ const fn zero_digest() -> DigestBytes {
     DigestBytes::from_array([0u8; 32])
 }
 
-fn make_v1_envelope(
+fn make_envelope(
     logical_time: u64,
     parent_id: Option<DigestBytes>,
 ) -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload = CanonicalPayload::new(serde_json::json!({"t": logical_time}))
         .map_err(|e| anyhow::anyhow!(e))?;
-    let canon = vr_jcs::to_canon_bytes(payload.as_value())?;
-    let event_hash = DigestBytes::from_array(*blake3::hash(&canon).as_bytes());
 
-    Ok(ReceiptEnvelope {
+    let mut envelope = ReceiptEnvelope {
         envelope_version: SchemaVersion::V1,
         receipt_type: ReceiptType::Event,
         context_digest: zero_digest(),
         schema_digest: zero_digest(),
         policy_digest: zero_digest(),
         logical_time: IJsonUInt::new(logical_time)?,
-        event_hash,
+        event_hash: zero_digest(), // placeholder
         parent_id,
         boundary_origin: Some(BoundaryOrigin::Engine),
         digest_algorithm: None,
         canonicalization: None,
         payload,
-    })
+    };
+    envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(envelope)
 }
 
 fn build_chain_json(length: usize) -> Result<Vec<u8>, anyhow::Error> {
@@ -41,7 +42,7 @@ fn build_chain_json(length: usize) -> Result<Vec<u8>, anyhow::Error> {
     let mut parent: Option<DigestBytes> = None;
     for i in 0..length {
         let t = (i + 1) as u64;
-        let envelope = make_v1_envelope(t, parent)?;
+        let envelope = make_envelope(t, parent)?;
         parent = Some(envelope.event_hash);
         envelopes.push(envelope);
     }
@@ -56,7 +57,7 @@ fn oversized_single_envelope_rejected() -> Result<(), anyhow::Error> {
         max_bytes: 50,
         ..VerifierLimits::default()
     };
-    let envelope = make_v1_envelope(1, None)?;
+    let envelope = make_envelope(1, None)?;
     let json = vr_jcs::to_canon_string(&envelope)?;
     let result = vertrule_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
@@ -141,7 +142,7 @@ fn limit_error_codes_stable_in_verification_result() -> Result<(), anyhow::Error
         max_bytes: 10,
         ..VerifierLimits::default()
     };
-    let envelope = make_v1_envelope(1, None)?;
+    let envelope = make_envelope(1, None)?;
     let json = vr_jcs::to_canon_string(&envelope)?;
     let result = vertrule_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);

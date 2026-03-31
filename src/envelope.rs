@@ -7,11 +7,10 @@ use crate::error::VerifyError;
 
 pub use vertrule_schemas::ReceiptEnvelope;
 
-/// Verify that `event_hash` matches the commitment for this envelope's
-/// schema version.
+/// Verify that `event_hash` matches the full-envelope commitment.
 ///
-/// - **V1**: `event_hash` = `BLAKE3(JCS(payload))`
-/// - **V2**: `event_hash` = `BLAKE3(JCS(envelope \ {event_hash}))`
+/// `event_hash` = `BLAKE3(JCS(envelope \ {event_hash}))` — all
+/// trust-bearing fields are committed.
 ///
 /// # Errors
 ///
@@ -40,7 +39,7 @@ pub fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> 
 /// recognised.
 pub fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
     let v = envelope.envelope_version;
-    if v == vertrule_schemas::SchemaVersion::V1 || v == vertrule_schemas::SchemaVersion::V2 {
+    if v == vertrule_schemas::SchemaVersion::V1 {
         Ok(())
     } else {
         Err(VerifyError::UnsupportedVersion { version: v.get() })

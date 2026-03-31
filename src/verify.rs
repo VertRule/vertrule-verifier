@@ -244,7 +244,7 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
         }
     };
 
-    // Verify signature (V1: over payload; V2: over full envelope)
+    // Verify signature (full-envelope commitment)
     match verify_signature(&envelope, &bundle) {
         Ok(()) => {
             result.signature_validation = Some(SignatureValidation {

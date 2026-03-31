@@ -1,32 +1,32 @@
 {
+  "description": "Chain where policy_digest differs between envelopes. Verifier must reject.",
+  "expected_result": "fail",
+  "expected_error": "PolicyInconsistent",
   "data": [
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "f594fd086c244db68bbaaaa260a520d010e66fa3b72ae911d254a63a253bef8e",
+      "receipt_type": "event",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "logical_time": 100,
       "payload": {
         "step": 0
       },
-      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "event",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "event_hash": "5dd34eac21e87919fa38734d01ec616f64eed030e6b5ec3349aa3456e0035a67"
     },
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "cfe4671d6908665fe25cd1f740a85b798832aa49b7f4e08847ec40b20d5256d1",
+      "receipt_type": "event",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "logical_time": 200,
-      "parent_id": "f594fd086c244db68bbaaaa260a520d010e66fa3b72ae911d254a63a253bef8e",
       "payload": {
         "step": 1
       },
-      "policy_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      "receipt_type": "event",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "parent_id": "5dd34eac21e87919fa38734d01ec616f64eed030e6b5ec3349aa3456e0035a67",
+      "event_hash": "0a885909da57782231e6ec2e386af385dcce776c1f0e3dcf236c6c2c4fac714e"
     }
-  ],
-  "description": "Chain where policy_digest differs between envelopes. Verifier must reject.",
-  "expected_error": "PolicyInconsistent",
-  "expected_result": "fail"
+  ]
 }

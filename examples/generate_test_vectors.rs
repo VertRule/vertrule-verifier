@@ -49,6 +49,8 @@ fn build_envelope(
 }
 
 /// Build an envelope with explicit context and policy digests.
+///
+/// Uses full-envelope commitment: `event_hash = BLAKE3(JCS(envelope \ {event_hash}))`.
 fn build_envelope_with_digests(
     payload: &serde_json::Value,
     logical_time: u64,
@@ -57,8 +59,7 @@ fn build_envelope_with_digests(
     context_digest: &serde_json::Value,
     policy_digest: &serde_json::Value,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    let event_hash = canon_hash(payload)?;
-
+    // Build envelope without event_hash
     let mut envelope = json!({
         "envelope_version": 1,
         "receipt_type": receipt_type,
@@ -66,13 +67,16 @@ fn build_envelope_with_digests(
         "schema_digest": placeholder_hex_64(0xbb),
         "policy_digest": policy_digest,
         "logical_time": logical_time,
-        "event_hash": event_hash,
         "payload": payload,
     });
 
     if let Some(pid) = parent_id {
         envelope["parent_id"] = json!(pid);
     }
+
+    // Compute full-envelope hash (all fields minus event_hash)
+    let event_hash = canon_hash(&envelope)?;
+    envelope["event_hash"] = json!(event_hash);
 
     Ok(envelope)
 }
@@ -126,10 +130,10 @@ fn gen_valid_single_envelope(dir: &std::path::Path) -> Result<(), Box<dyn std::e
         "value": 42
     });
 
-    let envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let envelope = build_envelope(&payload, 1000, None, "governance")?;
 
     let vector = json!({
-        "description": "Single valid envelope with correct event_hash (BLAKE3 of JCS-canonical payload).",
+        "description": "Single valid envelope with correct event_hash (full-envelope commitment).",
         "expected_result": "pass",
         "data": envelope
     });
@@ -144,7 +148,7 @@ fn gen_valid_chain_3(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Er
         "action": "initialize",
         "epoch": 0
     });
-    let env_0 = build_envelope(&payload_0, 100, None, "Governance")?;
+    let env_0 = build_envelope(&payload_0, 100, None, "governance")?;
     let hash_0 = get_hash(&env_0)?;
 
     let payload_1 = json!({
@@ -152,7 +156,7 @@ fn gen_valid_chain_3(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Er
         "action": "update_policy",
         "policy_version": 2
     });
-    let env_1 = build_envelope(&payload_1, 200, Some(&hash_0), "Governance")?;
+    let env_1 = build_envelope(&payload_1, 200, Some(&hash_0), "governance")?;
     let hash_1 = get_hash(&env_1)?;
 
     let payload_2 = json!({
@@ -160,7 +164,7 @@ fn gen_valid_chain_3(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Er
         "action": "seal_epoch",
         "epoch": 1
     });
-    let env_2 = build_envelope(&payload_2, 300, Some(&hash_1), "Governance")?;
+    let env_2 = build_envelope(&payload_2, 300, Some(&hash_1), "governance")?;
 
     let chain = json!([env_0, env_1, env_2]);
 
@@ -184,10 +188,14 @@ fn gen_valid_signed(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Err
         "version": 1
     });
 
-    let envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let envelope = build_envelope(&payload, 1000, None, "governance")?;
 
-    // Domain-separated receipt digest
-    let canon_bytes = vr_jcs::to_canon_bytes(&payload)?;
+    // Domain-separated receipt digest (full-envelope minus event_hash)
+    let mut commitment_value = envelope.clone();
+    if let serde_json::Value::Object(ref mut map) = commitment_value {
+        map.remove("event_hash");
+    }
+    let canon_bytes = vr_jcs::to_canon_bytes(&commitment_value)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);
@@ -243,9 +251,21 @@ fn gen_valid_with_algorithms(dir: &std::path::Path) -> Result<(), Box<dyn std::e
         "value": 99
     });
 
-    let mut envelope = build_envelope(&payload, 2000, None, "Governance")?;
-    envelope["digest_algorithm"] = json!("BLAKE3");
-    envelope["canonicalization"] = json!("JCS");
+    // Build without event_hash, add algorithm fields, then compute hash
+    let mut obj = json!({
+        "envelope_version": 1,
+        "receipt_type": "governance",
+        "context_digest": placeholder_hex_64(0xaa),
+        "schema_digest": placeholder_hex_64(0xbb),
+        "policy_digest": placeholder_hex_64(0xcc),
+        "logical_time": 2000,
+        "digest_algorithm": "BLAKE3",
+        "canonicalization": "JCS",
+        "payload": payload,
+    });
+    let event_hash = canon_hash(&obj)?;
+    obj["event_hash"] = json!(event_hash);
+    let envelope = obj;
 
     let vector = json!({
         "description": "Valid envelope with explicit digest_algorithm and canonicalization fields matching v1 identity triple.",
@@ -268,7 +288,7 @@ fn gen_invalid_event_hash(dir: &std::path::Path) -> Result<(), Box<dyn std::erro
         "value": 42
     });
 
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
 
     let good_hash = get_hash(&envelope)?;
     let tampered = format!(
@@ -290,11 +310,11 @@ fn gen_invalid_event_hash(dir: &std::path::Path) -> Result<(), Box<dyn std::erro
 
 fn gen_invalid_chain_broken_link(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     let payload_0 = json!({ "step": 0 });
-    let env_0 = build_envelope(&payload_0, 100, None, "Event")?;
+    let env_0 = build_envelope(&payload_0, 100, None, "event")?;
 
     let payload_1 = json!({ "step": 1 });
     let bogus_parent = "ff".repeat(32);
-    let env_1 = build_envelope(&payload_1, 200, Some(&bogus_parent), "Event")?;
+    let env_1 = build_envelope(&payload_1, 200, Some(&bogus_parent), "event")?;
 
     let vector = json!({
         "description": "Chain where envelope[1].parent_id does not match envelope[0].event_hash.",
@@ -310,11 +330,11 @@ fn gen_invalid_chain_time_regression(
     dir: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let payload_0 = json!({ "step": 0 });
-    let env_0 = build_envelope(&payload_0, 500, None, "Event")?;
+    let env_0 = build_envelope(&payload_0, 500, None, "event")?;
     let hash_0 = get_hash(&env_0)?;
 
     let payload_1 = json!({ "step": 1 });
-    let env_1 = build_envelope(&payload_1, 400, Some(&hash_0), "Event")?;
+    let env_1 = build_envelope(&payload_1, 400, Some(&hash_0), "event")?;
 
     let vector = json!({
         "description": "Chain where logical_time goes backwards (500 -> 400). Verifier must reject.",
@@ -333,7 +353,7 @@ fn gen_invalid_version(dir: &std::path::Path) -> Result<(), Box<dyn std::error::
         "value": 1
     });
 
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
     envelope["envelope_version"] = json!(99);
 
     let vector = json!({
@@ -349,7 +369,7 @@ fn gen_invalid_version(dir: &std::path::Path) -> Result<(), Box<dyn std::error::
 
 fn gen_invalid_unknown_field(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     let payload = json!({"action": "test"});
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
     envelope["bogus_field"] = json!(42);
 
     let vector = json!({
@@ -366,7 +386,7 @@ fn gen_invalid_unknown_field(dir: &std::path::Path) -> Result<(), Box<dyn std::e
 fn gen_invalid_missing_required(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     // Build valid then remove event_hash
     let payload = json!({"action": "test"});
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
     let obj = envelope.as_object_mut().ok_or("not an object")?;
     obj.remove("event_hash");
 
@@ -385,7 +405,7 @@ fn gen_invalid_unknown_receipt_type(
     dir: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let payload = json!({"action": "test"});
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
     envelope["receipt_type"] = json!("Quantum");
 
     let vector = json!({
@@ -400,16 +420,18 @@ fn gen_invalid_unknown_receipt_type(
 }
 
 fn gen_invalid_duplicate_hash(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-    // Both envelopes have same payload → same event_hash
+    // Build valid first envelope
     let payload = json!({"action": "duplicate"});
-    let env_0 = build_envelope(&payload, 100, None, "Event")?;
+    let env_0 = build_envelope(&payload, 100, None, "event")?;
     let hash_0 = get_hash(&env_0)?;
 
-    // Same payload but different logical_time, correct parent
-    let env_1 = build_envelope(&payload, 200, Some(&hash_0), "Event")?;
+    // Build second envelope with correct linkage but force its event_hash
+    // to match env_0's — creating an intentional duplicate
+    let mut env_1 = build_envelope(&payload, 200, Some(&hash_0), "event")?;
+    env_1["event_hash"] = env_0["event_hash"].clone();
 
     let vector = json!({
-        "description": "Chain with duplicate event_hash (same payload in both envelopes). Verifier must reject.",
+        "description": "Chain with duplicate event_hash (forced). Verifier must reject.",
         "expected_result": "fail",
         "expected_error": "DuplicateEventHash",
         "data": [env_0, env_1]
@@ -422,7 +444,7 @@ fn gen_invalid_context_inconsistent(
     dir: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let payload_0 = json!({"step": 0});
-    let env_0 = build_envelope(&payload_0, 100, None, "Event")?;
+    let env_0 = build_envelope(&payload_0, 100, None, "event")?;
     let hash_0 = get_hash(&env_0)?;
 
     let payload_1 = json!({"step": 1});
@@ -431,7 +453,7 @@ fn gen_invalid_context_inconsistent(
         &payload_1,
         200,
         Some(&hash_0),
-        "Event",
+        "event",
         &placeholder_hex_64(0xdd), // different from env_0's 0xaa
         &placeholder_hex_64(0xcc),
     )?;
@@ -450,7 +472,7 @@ fn gen_invalid_policy_inconsistent(
     dir: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let payload_0 = json!({"step": 0});
-    let env_0 = build_envelope(&payload_0, 100, None, "Event")?;
+    let env_0 = build_envelope(&payload_0, 100, None, "event")?;
     let hash_0 = get_hash(&env_0)?;
 
     let payload_1 = json!({"step": 1});
@@ -459,7 +481,7 @@ fn gen_invalid_policy_inconsistent(
         &payload_1,
         200,
         Some(&hash_0),
-        "Event",
+        "event",
         &placeholder_hex_64(0xaa),
         &placeholder_hex_64(0xdd), // different from env_0's 0xcc
     )?;
@@ -481,7 +503,7 @@ fn gen_invalid_bit_flip(dir: &std::path::Path) -> Result<(), Box<dyn std::error:
         "value": 42
     });
 
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
 
     // Flip one bit in the first byte of event_hash
     let good_hash = get_hash(&envelope)?;
@@ -527,7 +549,7 @@ fn gen_invalid_wrong_digest_algorithm(
         "value": 1
     });
 
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
     envelope["digest_algorithm"] = json!("SHA256");
 
     let vector = json!({
@@ -549,7 +571,7 @@ fn gen_invalid_wrong_canonicalization(
         "value": 1
     });
 
-    let mut envelope = build_envelope(&payload, 1000, None, "Governance")?;
+    let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
     envelope["canonicalization"] = json!("CBOR");
 
     let vector = json!({
@@ -566,23 +588,22 @@ fn gen_invalid_schema_inconsistent(
     dir: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let payload_0 = json!({"step": 0});
-    let env_0 = build_envelope(&payload_0, 100, None, "Event")?;
+    let env_0 = build_envelope(&payload_0, 100, None, "event")?;
     let hash_0 = get_hash(&env_0)?;
 
     let payload_1 = json!({"step": 1});
     // Same context and policy, but different schema_digest
-    let event_hash_1 = canon_hash(&payload_1)?;
-    let env_1 = json!({
-        "envelope_version": 1,
-        "receipt_type": "Event",
-        "context_digest": placeholder_hex_64(0xaa),
-        "schema_digest": placeholder_hex_64(0xdd),
-        "policy_digest": placeholder_hex_64(0xcc),
-        "logical_time": 200,
-        "event_hash": event_hash_1,
-        "parent_id": hash_0,
-        "payload": payload_1,
-    });
+    let env_1 = build_envelope_with_digests(
+        &payload_1,
+        200,
+        Some(&hash_0),
+        "event",
+        &placeholder_hex_64(0xaa),
+        &placeholder_hex_64(0xcc),
+    )?;
+    // Tamper schema_digest after commitment (intentionally invalid)
+    let mut env_1 = env_1;
+    env_1["schema_digest"] = placeholder_hex_64(0xdd);
 
     let vector = json!({
         "description": "Chain where schema_digest differs between envelopes. Verifier must reject.",
@@ -600,9 +621,14 @@ fn gen_invalid_signature(dir: &std::path::Path) -> Result<(), Box<dyn std::error
     let pk = sk.verifying_key();
 
     let payload = json!({"action": "signed_change", "version": 1});
+    let envelope = build_envelope(&payload, 1000, None, "governance")?;
 
-    // Sign the correct payload
-    let canon_bytes = vr_jcs::to_canon_bytes(&payload)?;
+    // Domain-separated receipt digest (full-envelope minus event_hash)
+    let mut commitment_value = envelope;
+    if let serde_json::Value::Object(ref mut map) = &mut commitment_value {
+        map.remove("event_hash");
+    }
+    let canon_bytes = vr_jcs::to_canon_bytes(&commitment_value)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);

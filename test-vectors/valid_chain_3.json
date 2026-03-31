@@ -1,50 +1,50 @@
 {
+  "description": "Chain of 3 envelopes with correct parent_id linkage and monotonic logical_time.",
+  "expected_result": "pass",
   "data": [
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "ba596ab3f3c0761f0e676588889733eb31b4a5b9a937adba7d5374232a9631df",
+      "receipt_type": "governance",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "logical_time": 100,
       "payload": {
-        "action": "initialize",
         "domain": "test.governance.v1",
+        "action": "initialize",
         "epoch": 0
       },
-      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "governance",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "event_hash": "7d85bb9128621eb8298ac97ebc3277a804c447ef4e12b523dfaf190f0e6cc760"
     },
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "6352cfa483513f209cb27abb15a8df68dad8dd0cbc075903edbef7e1c70b49fc",
+      "receipt_type": "governance",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "logical_time": 200,
-      "parent_id": "ba596ab3f3c0761f0e676588889733eb31b4a5b9a937adba7d5374232a9631df",
       "payload": {
-        "action": "update_policy",
         "domain": "test.governance.v1",
+        "action": "update_policy",
         "policy_version": 2
       },
-      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "governance",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "parent_id": "7d85bb9128621eb8298ac97ebc3277a804c447ef4e12b523dfaf190f0e6cc760",
+      "event_hash": "3075b530916d03259da892788f4f9fc1691bc88f5a3367ed2eabae43e6a961a8"
     },
     {
-      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "envelope_version": 1,
-      "event_hash": "7b8161cebc121612657d2847d773c8529a0f0be25905dba7dd333f8cd15c6e53",
+      "receipt_type": "governance",
+      "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "logical_time": 300,
-      "parent_id": "6352cfa483513f209cb27abb15a8df68dad8dd0cbc075903edbef7e1c70b49fc",
       "payload": {
-        "action": "seal_epoch",
         "domain": "test.governance.v1",
+        "action": "seal_epoch",
         "epoch": 1
       },
-      "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "receipt_type": "governance",
-      "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "parent_id": "3075b530916d03259da892788f4f9fc1691bc88f5a3367ed2eabae43e6a961a8",
+      "event_hash": "9b7db40c65b999d33b53bdf787cb199372d1baa1126d78f9d7e4ea964818fa9f"
     }
-  ],
-  "description": "Chain of 3 envelopes with correct parent_id linkage and monotonic logical_time.",
-  "expected_result": "pass"
+  ]
 }
