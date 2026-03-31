@@ -1,11 +1,12 @@
 [package]
-# Publish gate: requires vertrule-schemas and vr-jcs published first, plus WASM CI green.
 name = "vertrule-verifier"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Public-facing verifier for VertRule receipt envelopes -- zero runtime deps"
 repository = "https://github.com/VertRule/vertrule-verifier"
+keywords = ["verifier", "receipts", "cryptography", "governance", "canonicalization"]
+categories = ["cryptography", "command-line-utilities"]
 exclude = [
     ".vr/**",
     ".github/**",
