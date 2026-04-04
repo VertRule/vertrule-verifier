@@ -119,24 +119,16 @@ fn run_signed(receipt_path: &str, sig_path: &str) -> ExitCode {
 
 fn emit_result(result: &vertrule_verifier::result::VerificationResult) -> ExitCode {
     // Stdout: JCS-canonical result JSON
-    match serde_json::to_value(result) {
-        Ok(value) => match vr_jcs::to_canon_bytes(&value) {
-            Ok(canon_bytes) => {
-                // Write canonical bytes directly to stdout
-                if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &canon_bytes) {
-                    eprintln!("Error writing result: {e}");
-                    return ExitCode::from(2);
-                }
-                // Trailing newline for terminal friendliness
-                let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\n");
-            }
-            Err(e) => {
-                eprintln!("Error canonicalizing result: {e}");
+    match result.to_canon_bytes() {
+        Ok(canon_bytes) => {
+            if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &canon_bytes) {
+                eprintln!("Error writing result: {e}");
                 return ExitCode::from(2);
             }
-        },
+            let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\n");
+        }
         Err(e) => {
-            eprintln!("Error serializing result: {e}");
+            eprintln!("Error canonicalizing result: {e}");
             return ExitCode::from(2);
         }
     }

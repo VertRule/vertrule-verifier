@@ -38,6 +38,7 @@
 #![deny(clippy::panic)]
 #![warn(missing_docs)]
 
+pub(crate) mod canon;
 pub mod chain;
 pub mod envelope;
 pub mod error;

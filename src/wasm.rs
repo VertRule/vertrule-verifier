@@ -24,14 +24,7 @@ use crate::result::VerificationResult;
 /// Falls back to `serde_json::to_string` if canonicalization fails,
 /// preserving fail-closed semantics (the result still reaches the caller).
 fn result_to_json(result: &VerificationResult) -> String {
-    let value = match serde_json::to_value(result) {
-        Ok(v) => v,
-        Err(e) => {
-            return error_json(&format!("serialization error: {e}"));
-        }
-    };
-
-    match vr_jcs::to_canon_string(&value) {
+    match result.to_canon_string() {
         Ok(s) => s,
         Err(e) => error_json(&format!("canonicalization error: {e}")),
     }
@@ -43,7 +36,13 @@ fn result_to_json(result: &VerificationResult) -> String {
 fn error_json(message: &str) -> String {
     // Manual construction avoids depending on serde for the fallback path.
     // Fields are in JCS sort order (alphabetical).
-    let escaped = message.replace('\\', "\\\\").replace('"', "\\\"");
+    let escaped = message
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
+        .replace(|c: char| c.is_control(), "");
     format!("{{\"errors\":[\"{escaped}\"],\"status\":\"INTERNAL_VERIFIER_ERROR\"}}")
 }
 
@@ -115,9 +114,7 @@ mod tests {
     fn verify_receipt_json_returns_valid_for_good_input() {
         // Build a valid single envelope as canonical JSON
         let payload = serde_json::json!({"key": "value"});
-        let payload_canon = vr_jcs::to_canon_bytes(&payload)
-            .map_err(|e| format!("{e}"))
-            .ok();
+        let payload_canon = crate::canon::typed_canon_bytes(&payload).ok();
         let Some(ref canon_bytes) = payload_canon else {
             return; // canonicalization not available in this context
         };
@@ -144,7 +141,7 @@ mod tests {
         );
 
         let value = serde_json::Value::Object(obj);
-        let Ok(input) = vr_jcs::to_canon_string(&value) else {
+        let Ok(input) = crate::canon::typed_canon_string(&value) else {
             return;
         };
 
@@ -218,9 +215,7 @@ mod tests {
     #[test]
     fn result_determinism_through_wasm_api() {
         let payload = serde_json::json!({"key": "value"});
-        let payload_canon = vr_jcs::to_canon_bytes(&payload)
-            .map_err(|e| format!("{e}"))
-            .ok();
+        let payload_canon = crate::canon::typed_canon_bytes(&payload).ok();
         let Some(ref canon_bytes) = payload_canon else {
             return;
         };
@@ -247,7 +242,7 @@ mod tests {
         );
 
         let value = serde_json::Value::Object(obj);
-        let Ok(input) = vr_jcs::to_canon_string(&value) else {
+        let Ok(input) = crate::canon::typed_canon_string(&value) else {
             return;
         };
 

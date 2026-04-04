@@ -3,6 +3,7 @@
 use crate::test_support::vr_test;
 use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey};
+use serde_json::json;
 
 use super::*;
 use vertrule_schemas::{
@@ -31,20 +32,17 @@ fn make_test_envelope(payload_json: serde_json::Value) -> Result<ReceiptEnvelope
         CanonicalPayload::new(payload_json).map_err(|e| anyhow::anyhow!("payload: {e}"))?;
     let logical_time = IJsonUInt::new(1).map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
 
-    let mut envelope = ReceiptEnvelope {
-        envelope_version: SchemaVersion::V1,
-        receipt_type: ReceiptType::Event,
-        context_digest: zero_digest(),
-        schema_digest: zero_digest(),
-        policy_digest: zero_digest(),
-        logical_time,
-        event_hash: zero_digest(), // placeholder
-        parent_id: None,
-        boundary_origin: None,
-        digest_algorithm: None,
-        canonicalization: None,
-        payload,
-    };
+    let mut envelope: ReceiptEnvelope = serde_json::from_value(json!({
+        "envelope_version": SchemaVersion::V1.get(),
+        "receipt_type": ReceiptType::Event,
+        "context_digest": zero_digest(),
+        "schema_digest": zero_digest(),
+        "policy_digest": zero_digest(),
+        "logical_time": logical_time.get(),
+        "event_hash": zero_digest(),
+        "payload": payload,
+    }))
+    .map_err(|e| anyhow::anyhow!("envelope: {e}"))?;
     envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)
         .map_err(|e| anyhow::anyhow!("event_hash: {e}"))?;
     Ok(envelope)
@@ -165,7 +163,7 @@ vr_test!(
         let receipt_digest = compute_receipt_digest(&envelope)?;
 
         // Compute plain BLAKE3 (no prefix) — what event_hash uses
-        let canon_bytes = vr_jcs::to_canon_bytes(envelope.payload.as_value())
+        let canon_bytes = crate::canon::typed_canon_bytes(envelope.payload.as_value())
             .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
         let plain_hash = blake3::hash(&canon_bytes);
         let plain_digest = DigestBytes::from_array(*plain_hash.as_bytes());

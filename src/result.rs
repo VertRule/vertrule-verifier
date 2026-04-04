@@ -169,10 +169,29 @@ impl VerificationResult {
     /// Returns error if canonicalization fails.
     pub fn digest(&self) -> Result<DigestBytes, VerifyError> {
         let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
-        let canon_bytes =
-            vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        let canon_bytes = crate::canon::typed_canon_bytes(&value)?;
         let hash = blake3::hash(&canon_bytes);
         Ok(DigestBytes::from_array(*hash.as_bytes()))
+    }
+
+    /// Serialize this result to JCS-canonical JSON bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if serialization or canonicalization fails.
+    pub fn to_canon_bytes(&self) -> Result<Vec<u8>, VerifyError> {
+        let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
+        crate::canon::typed_canon_bytes(&value)
+    }
+
+    /// Serialize this result to a JCS-canonical JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if serialization or canonicalization fails.
+    pub fn to_canon_string(&self) -> Result<String, VerifyError> {
+        let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
+        crate::canon::typed_canon_string(&value)
     }
 }
 

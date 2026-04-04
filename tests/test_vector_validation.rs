@@ -47,6 +47,12 @@ fn load_vector(name: &str) -> anyhow::Result<serde_json::Value> {
     Ok(value)
 }
 
+/// Typed canonicalization helper (non-deprecated round-trip).
+fn canon_bytes(value: &impl serde::Serialize) -> anyhow::Result<Vec<u8>> {
+    let json = serde_json::to_vec(value)?;
+    Ok(vr_jcs::to_canon_bytes_from_slice(&json)?)
+}
+
 /// Load raw canonical bytes from `test-vectors/raw/<name>.json`.
 fn load_raw(name: &str) -> anyhow::Result<Vec<u8>> {
     let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -452,7 +458,7 @@ vr_test!(
         if let serde_json::Value::Object(ref mut map) = data {
             map.remove("event_hash");
         }
-        let canon_bytes = vr_jcs::to_canon_bytes(&data).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let canon_bytes = canon_bytes(&data)?;
         let computed = hex::encode(blake3::hash(&canon_bytes).as_bytes());
 
         need(

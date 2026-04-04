@@ -3,3 +3,4 @@
 .DS_Store
 operator_private/
 .claude/settings.local.json
+memory/

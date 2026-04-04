@@ -25,11 +25,11 @@ pub fn ingest_envelope(raw_bytes: &[u8]) -> Result<ReceiptEnvelope, VerifyError>
 ///
 /// Performs in order:
 /// 1. Byte-size limit check
-/// 2. JSON parse
-/// 3. Structural limit checks (depth, node count, object size, array size)
-/// 4. Schema profile validation (unknown/missing fields)
-/// 5. Structural float detection
-/// 6. Canonical form check
+/// 2. Canonical admission (strict raw-byte JCS API)
+/// 3. JSON parse
+/// 4. Structural limit checks (depth, node count, object size, array size)
+/// 5. Schema profile validation (unknown/missing fields)
+/// 6. Structural float detection
 /// 7. Typed deserialization
 ///
 /// # Errors
@@ -42,23 +42,24 @@ pub fn ingest_envelope_with_limits(
     // 1. Byte-size limit
     limits::check_byte_limit(raw_bytes, limits)?;
 
-    // 2. Parse raw bytes as JSON Value
+    // 2. Canonical admission — strict raw-byte API with duplicate-key
+    //    rejection and I-JSON validation.
+    crate::canon::admit_canonical_bytes(raw_bytes)?;
+
+    // 3. Parse raw bytes as JSON Value (input is known-valid canonical JSON)
     let value: serde_json::Value =
         serde_json::from_slice(raw_bytes).map_err(|e| VerifyError::MalformedJson {
             reason: e.to_string(),
         })?;
 
-    // 3. Structural limits
+    // 4. Structural limits
     limits::check_structure(&value, limits)?;
 
-    // 4. Schema profile validation
+    // 5. Schema profile validation
     validate_envelope_schema(&value)?;
 
-    // 5. Reject floats in structural integer fields
+    // 6. Reject floats in structural integer fields
     reject_structural_floats(&value)?;
-
-    // 6. Canonical form check
-    verify_canonical_form(raw_bytes, &value)?;
 
     // 7. Typed deserialization
     let envelope: ReceiptEnvelope =
@@ -87,16 +88,20 @@ pub fn ingest_chain_with_limits(
     raw_bytes: &[u8],
     limits: &VerifierLimits,
 ) -> Result<Vec<ReceiptEnvelope>, VerifyError> {
-    // Byte-size limit
+    // 1. Byte-size limit
     limits::check_byte_limit(raw_bytes, limits)?;
 
-    // Parse as array
+    // 2. Canonical admission — validates the entire array (including
+    //    empty arrays like `[]`) against the strict raw-byte JCS API.
+    crate::canon::admit_canonical_bytes(raw_bytes)?;
+
+    // 3. Parse as array (input is known-valid canonical JSON)
     let array: serde_json::Value =
         serde_json::from_slice(raw_bytes).map_err(|e| VerifyError::MalformedJson {
             reason: e.to_string(),
         })?;
 
-    // Structural limits on the full array
+    // 4. Structural limits on the full array
     limits::check_structure(&array, limits)?;
 
     let serde_json::Value::Array(elements) = array else {
@@ -109,25 +114,17 @@ pub fn ingest_chain_with_limits(
         return Ok(Vec::new());
     }
 
-    // Chain length limit
+    // 5. Chain length limit
     limits::check_chain_length(elements.len(), limits)?;
 
-    // Canonical form: verify the entire array was in JCS canonical form.
-    // Re-serialize from owned elements to compare against raw input.
-    let array_value = serde_json::Value::Array(elements.clone());
-    verify_canonical_form(raw_bytes, &array_value)?;
-
+    // 6. Per-element validation and deserialization.
+    //    No array clone needed — canonical form was verified at step 2.
     let mut envelopes = Vec::with_capacity(elements.len());
 
-    // Take ownership of elements — no per-element clone needed.
     for (i, elem) in elements.into_iter().enumerate() {
-        // Schema profile validation per element
         validate_envelope_schema(&elem)?;
-
-        // Float detection per element
         reject_structural_floats(&elem)?;
 
-        // Typed deserialization — consumes the Value, no clone
         let envelope: ReceiptEnvelope =
             serde_json::from_value(elem).map_err(|e| VerifyError::MalformedJson {
                 reason: format!("element {i}: {e}"),
@@ -155,21 +152,6 @@ fn reject_structural_floats(value: &serde_json::Value) -> Result<(), VerifyError
                 }
             }
         }
-    }
-
-    Ok(())
-}
-
-/// Verify that the raw input bytes are in JCS canonical form.
-fn verify_canonical_form(raw_bytes: &[u8], value: &serde_json::Value) -> Result<(), VerifyError> {
-    let canonical = vr_jcs::to_canon_bytes(value).map_err(|e| VerifyError::NonCanonical {
-        reason: format!("canonicalization failed: {e}"),
-    })?;
-
-    if raw_bytes != canonical.as_slice() {
-        return Err(VerifyError::NonCanonical {
-            reason: "input is not in JCS canonical form".to_string(),
-        });
     }
 
     Ok(())

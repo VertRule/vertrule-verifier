@@ -37,8 +37,8 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
-vertrule-schemas = "0.2"
-vr-jcs = "0.2"
+vertrule-schemas = "0.2.2"
+vr-jcs = "0.3.0"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]

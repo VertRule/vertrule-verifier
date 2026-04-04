@@ -14,8 +14,15 @@ use vertrule_schemas::{GradientCouplingPayload, MriBatchPayload};
 
 use crate::error::VerifyError;
 
+/// Convert a `u32` payload field to `usize` with an explicit boundary check.
+fn checked_len(name: &str, value: u32) -> Result<usize, VerifyError> {
+    usize::try_from(value).map_err(|_| VerifyError::PayloadShapeMismatch {
+        reason: format!("{name} does not fit in usize"),
+    })
+}
+
 /// Expected schema identifier for gradient coupling payloads.
-const GRADIENT_COUPLING_SCHEMA: &str = "mri2.gradient_coupling@0.1";
+const GRADIENT_COUPLING_SCHEMA: &str = "vr.mri.gradient_coupling@0.1";
 
 /// Validate the structural invariants of an [`MriBatchPayload`].
 ///
@@ -57,7 +64,7 @@ pub fn validate_mri_batch_payload(payload: &MriBatchPayload) -> Result<(), Verif
                 reason: "degenerate_mask present but batch_len is absent".to_string(),
             });
         };
-        let expected = batch_len as usize;
+        let expected = checked_len("batch_len", batch_len)?;
         if mask.len() != expected {
             return Err(VerifyError::PayloadShapeMismatch {
                 reason: format!(
@@ -87,7 +94,7 @@ pub fn validate_gradient_coupling_payload(
     payload: &GradientCouplingPayload,
 ) -> Result<(), VerifyError> {
     // Schema identity
-    if payload.schema != GRADIENT_COUPLING_SCHEMA {
+    if payload.schema.as_str() != GRADIENT_COUPLING_SCHEMA {
         return Err(VerifyError::PayloadShapeMismatch {
             reason: format!(
                 "schema must be \"{GRADIENT_COUPLING_SCHEMA}\", got \"{}\"",
@@ -103,7 +110,7 @@ pub fn validate_gradient_coupling_payload(
         });
     }
 
-    let n = payload.num_layers as usize;
+    let n = checked_len("num_layers", payload.num_layers)?;
 
     // Vector lengths
     check_fixed_vector(n, &payload.grad_q_norms, "grad_q_norms")?;
@@ -168,7 +175,7 @@ fn check_vector_field(
                 reason: format!("{name} present but batch_len is absent"),
             });
         };
-        let expected = batch_len as usize;
+        let expected = checked_len("batch_len", batch_len)?;
         if vec.len() != expected {
             return Err(VerifyError::PayloadShapeMismatch {
                 reason: format!(
@@ -184,57 +191,52 @@ fn check_vector_field(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use vertrule_schemas::{
-        BatchReduction, ReductionAxis, ReductionMode, ReductionProvenance, TokenReduction,
+        BatchReduction, GradientCouplingPayload, ReductionAxis, ReductionMode, ReductionProvenance,
+        TokenReduction,
     };
 
-    fn sample_provenance() -> ReductionProvenance {
-        ReductionProvenance {
-            reduction_mode: ReductionMode::PerExampleThenMean,
-            reduced_axes: vec![
+    fn sample_provenance() -> Result<ReductionProvenance, anyhow::Error> {
+        Ok(serde_json::from_value(json!({
+            "reduction_mode": ReductionMode::PerExampleThenMean,
+            "reduced_axes": [
                 ReductionAxis::Token,
                 ReductionAxis::Hidden,
-                ReductionAxis::Batch,
+                ReductionAxis::Batch
             ],
-            token_reduction: TokenReduction::Mean,
-            batch_reduction: BatchReduction::Mean,
-        }
+            "token_reduction": TokenReduction::Mean,
+            "batch_reduction": BatchReduction::Mean,
+        }))?)
     }
 
-    fn scalar_only() -> MriBatchPayload {
-        MriBatchPayload {
-            schema: "mri2.batch_invariant@0.1".to_string(),
-            layer: 0,
-            q_scalar: 0x3F80_0000,
-            e_scalar: None,
-            h_scalar: None,
-            c_scalar: None,
-            provenance: sample_provenance(),
-            batch_len: None,
-            q_per_example: None,
-            e_per_example: None,
-            h_per_example: None,
-            c_per_example: None,
-            degenerate_mask: None,
-        }
+    fn scalar_only() -> Result<MriBatchPayload, anyhow::Error> {
+        Ok(serde_json::from_value(json!({
+            "schema": "vr.mri.batch_invariant@0.1",
+            "layer": 0,
+            "q_scalar": 0x3F80_0000u32,
+            "provenance": sample_provenance()?,
+        }))?)
     }
 
     #[test]
-    fn scalar_only_passes() {
-        assert!(validate_mri_batch_payload(&scalar_only()).is_ok());
+    fn scalar_only_passes() -> Result<(), anyhow::Error> {
+        assert!(validate_mri_batch_payload(&scalar_only()?).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn valid_vector_passes() {
-        let mut p = scalar_only();
+    fn valid_vector_passes() -> Result<(), anyhow::Error> {
+        let mut p = scalar_only()?;
         p.batch_len = Some(3);
         p.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000, 0x4040_0000]);
         assert!(validate_mri_batch_payload(&p).is_ok());
+        Ok(())
     }
 
     #[test]
     fn vector_without_batch_len_rejected() -> Result<(), anyhow::Error> {
-        let mut p = scalar_only();
+        let mut p = scalar_only()?;
         p.q_per_example = Some(vec![0x3F80_0000]);
         let Err(err) = validate_mri_batch_payload(&p) else {
             return Err(anyhow::anyhow!("expected validation to fail"));
@@ -248,7 +250,7 @@ mod tests {
 
     #[test]
     fn vector_length_mismatch_rejected() -> Result<(), anyhow::Error> {
-        let mut p = scalar_only();
+        let mut p = scalar_only()?;
         p.batch_len = Some(4);
         p.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000]);
         let Err(err) = validate_mri_batch_payload(&p) else {
@@ -262,38 +264,42 @@ mod tests {
     }
 
     #[test]
-    fn batch_len_without_vector_passes() {
-        let mut p = scalar_only();
+    fn batch_len_without_vector_passes() -> Result<(), anyhow::Error> {
+        let mut p = scalar_only()?;
         p.batch_len = Some(8);
         assert!(validate_mri_batch_payload(&p).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn empty_vector_with_zero_batch_len_passes() {
-        let mut p = scalar_only();
+    fn empty_vector_with_zero_batch_len_passes() -> Result<(), anyhow::Error> {
+        let mut p = scalar_only()?;
         p.batch_len = Some(0);
         p.q_per_example = Some(vec![]);
         assert!(validate_mri_batch_payload(&p).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn e_per_example_without_batch_len_rejected() {
-        let mut p = scalar_only();
+    fn e_per_example_without_batch_len_rejected() -> Result<(), anyhow::Error> {
+        let mut p = scalar_only()?;
         p.e_per_example = Some(vec![0x3F80_0000]);
         assert!(validate_mri_batch_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn degenerate_mask_length_mismatch_rejected() {
-        let mut p = scalar_only();
+    fn degenerate_mask_length_mismatch_rejected() -> Result<(), anyhow::Error> {
+        let mut p = scalar_only()?;
         p.batch_len = Some(3);
         p.degenerate_mask = Some(vec![0, 1]); // 2 != 3
         assert!(validate_mri_batch_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn all_vectors_valid_passes() {
-        let mut p = scalar_only();
+    fn all_vectors_valid_passes() -> Result<(), anyhow::Error> {
+        let mut p = scalar_only()?;
         p.batch_len = Some(2);
         p.q_per_example = Some(vec![0x3F80_0000, 0x4000_0000]);
         p.e_per_example = Some(vec![0x4040_0000, 0x4080_0000]);
@@ -301,104 +307,108 @@ mod tests {
         p.c_per_example = Some(vec![0x40E0_0000, 0x4100_0000]);
         p.degenerate_mask = Some(vec![0, 1]);
         assert!(validate_mri_batch_payload(&p).is_ok());
+        Ok(())
     }
 
-    // ── Gradient coupling validator tests ───────────────────────────────
-
-    use vertrule_schemas::GradientCouplingPayload;
-
-    fn gc_provenance() -> ReductionProvenance {
-        ReductionProvenance {
-            reduction_mode: ReductionMode::BatchCollapsed,
-            reduced_axes: vec![ReductionAxis::Batch],
-            token_reduction: TokenReduction::Mean,
-            batch_reduction: BatchReduction::Mean,
-        }
+    fn gc_provenance() -> Result<ReductionProvenance, anyhow::Error> {
+        Ok(serde_json::from_value(json!({
+            "reduction_mode": ReductionMode::BatchCollapsed,
+            "reduced_axes": [ReductionAxis::Batch],
+            "token_reduction": TokenReduction::Mean,
+            "batch_reduction": BatchReduction::Mean,
+        }))?)
     }
 
-    fn valid_gc() -> GradientCouplingPayload {
-        GradientCouplingPayload {
-            schema: "mri2.gradient_coupling@0.1".to_string(),
-            step: 100,
-            num_layers: 2,
-            grad_q_norms: vec![0x3F80_0000, 0x4000_0000],
-            grad_lm_norms: vec![0x4040_0000, 0x4080_0000],
-            coupling_ratios: vec![0x3E4C_CCCD, 0x3E99_999A],
-            profile_cosine: 0x3F00_0000, // 0.5
-            provenance: gc_provenance(),
-        }
+    fn valid_gc() -> Result<GradientCouplingPayload, anyhow::Error> {
+        Ok(serde_json::from_value(json!({
+            "schema": "vr.mri.gradient_coupling@0.1",
+            "step": 100,
+            "num_layers": 2,
+            "grad_q_norms": [0x3F80_0000u32, 0x4000_0000u32],
+            "grad_lm_norms": [0x4040_0000u32, 0x4080_0000u32],
+            "coupling_ratios": [0x3E4C_CCCDu32, 0x3E99_999Au32],
+            "profile_cosine": 0x3F00_0000u32,
+            "provenance": gc_provenance()?,
+        }))?)
     }
 
     #[test]
-    fn gc_valid_passes() {
-        assert!(validate_gradient_coupling_payload(&valid_gc()).is_ok());
+    fn gc_valid_passes() -> Result<(), anyhow::Error> {
+        assert!(validate_gradient_coupling_payload(&valid_gc()?).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn gc_wrong_schema_rejected() {
-        let mut p = valid_gc();
-        p.schema = "wrong@0.1".to_string();
+    fn gc_wrong_schema_rejected() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
+        p.schema = serde_json::from_value(json!("vr.mri.wrong@0.1"))?;
         assert!(validate_gradient_coupling_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn gc_zero_layers_rejected() {
-        let mut p = valid_gc();
+    fn gc_zero_layers_rejected() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.num_layers = 0;
         p.grad_q_norms = vec![];
         p.grad_lm_norms = vec![];
         p.coupling_ratios = vec![];
         assert!(validate_gradient_coupling_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn gc_length_mismatch_rejected() {
-        let mut p = valid_gc();
+    fn gc_length_mismatch_rejected() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.grad_q_norms = vec![0x3F80_0000]; // 1 != 2
         assert!(validate_gradient_coupling_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn gc_nan_norm_rejected() {
-        let mut p = valid_gc();
+    fn gc_nan_norm_rejected() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.grad_q_norms[0] = 0x7FC0_0000; // NaN
         assert!(validate_gradient_coupling_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn gc_inf_ratio_rejected() {
-        let mut p = valid_gc();
+    fn gc_inf_ratio_rejected() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.coupling_ratios[1] = 0x7F80_0000; // +Inf
         assert!(validate_gradient_coupling_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn gc_cosine_out_of_range_rejected() {
-        let mut p = valid_gc();
+    fn gc_cosine_out_of_range_rejected() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.profile_cosine = 0x4000_0000; // 2.0, outside [-1,1]
         assert!(validate_gradient_coupling_payload(&p).is_err());
+        Ok(())
     }
 
     #[test]
-    fn gc_cosine_negative_one_passes() {
-        let mut p = valid_gc();
+    fn gc_cosine_negative_one_passes() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.profile_cosine = 0xBF80_0000; // -1.0
         assert!(validate_gradient_coupling_payload(&p).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn gc_cosine_zero_passes() {
-        let mut p = valid_gc();
+    fn gc_cosine_zero_passes() -> Result<(), anyhow::Error> {
+        let mut p = valid_gc()?;
         p.profile_cosine = 0; // 0.0
         assert!(validate_gradient_coupling_payload(&p).is_ok());
+        Ok(())
     }
 
     #[test]
     fn unknown_reduction_mode_is_parse_not_validation() {
-        // This test verifies the design decision: unknown enum variants
-        // are serde parse failures, not validate_mri_batch_payload errors.
         let json = r#"{
-            "schema": "mri2.batch_invariant@0.1",
+            "schema": "vr.mri.batch_invariant@0.1",
             "layer": 0,
             "q_scalar": 1065353216,
             "provenance": {

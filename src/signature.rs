@@ -11,7 +11,7 @@
 
 use base64::Engine;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use vertrule_schemas::DigestBytes;
 
@@ -48,7 +48,7 @@ const KEY_ID_HEX_LEN: usize = 24;
 /// A validated key identifier: exactly 24 lowercase hex characters.
 ///
 /// Derived as `hex(BLAKE3(public_key_bytes)[..12])`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct KeyId(String);
 
 impl KeyId {
@@ -109,7 +109,7 @@ impl<'de> Deserialize<'de> for KeyId {
 ///
 /// Mirrors `SignatureData` from `vertrule-crypto` plus the `timestamp` field
 /// needed to reconstruct the canonical signed message.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SignatureBundle {
     /// Signature algorithm (must be `"Ed25519"`).
@@ -125,7 +125,12 @@ pub struct SignatureBundle {
     /// Hash basis (must be `"BLAKE3+JCS"`).
     #[serde(rename = "digest_basis")]
     pub basis: String,
-    /// RFC 3339 timestamp used in the canonical signed message.
+    /// Producer-supplied timestamp token used in the canonical signed message.
+    ///
+    /// Verifiers treat this as an opaque string and bind it exactly into the
+    /// signed message. Producers may use RFC 3339 wall-clock time or a
+    /// deterministic logical-time string, but they must emit the same string
+    /// they originally signed.
     pub timestamp: String,
 }
 
@@ -149,8 +154,7 @@ pub fn compute_receipt_digest(
     if let serde_json::Value::Object(ref mut map) = value {
         map.remove("event_hash");
     }
-    let canon_bytes =
-        vr_jcs::to_canon_bytes(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let canon_bytes = crate::canon::typed_canon_bytes(&value)?;
 
     let mut hasher = blake3::Hasher::new();
     hasher.update(RECEIPT_PREFIX);

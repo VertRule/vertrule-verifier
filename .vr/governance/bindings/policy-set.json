@@ -7,6 +7,18 @@
       "mode": "bind+overlay",
       "overlay": "overlays/determinism@0.1.toml",
       "notes": "Scope overlay restricts to src/**/*.rs; no allowlist exceptions"
+    },
+    {
+      "policy_id": "repo-boundary@0.1",
+      "source": "governance/policies/repo-boundary@0.1",
+      "mode": "bind",
+      "notes": "Tier boundary enforcement — no overlay needed"
+    },
+    {
+      "policy_id": "receipt-canonicalization@0.1",
+      "source": "governance/policies/receipt-canonicalization@0.1",
+      "mode": "bind",
+      "notes": "JCS + BLAKE3 canonicalization requirements"
     }
   ],
   "repo_local_policies": []

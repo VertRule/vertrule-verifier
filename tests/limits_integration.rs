@@ -7,6 +7,17 @@ use vertrule_schemas::{
 use vertrule_verifier::limits::VerifierLimits;
 use vertrule_verifier::result::VerificationStatus;
 
+/// Typed canonicalization helpers (non-deprecated round-trip).
+fn canon_bytes(value: &impl serde::Serialize) -> Result<Vec<u8>, anyhow::Error> {
+    let json = serde_json::to_vec(value)?;
+    Ok(vr_jcs::to_canon_bytes_from_slice(&json)?)
+}
+
+fn canon_string(value: &impl serde::Serialize) -> Result<String, anyhow::Error> {
+    let json = serde_json::to_string(value)?;
+    Ok(vr_jcs::to_canon_string_from_str(&json)?)
+}
+
 const fn zero_digest() -> DigestBytes {
     DigestBytes::from_array([0u8; 32])
 }
@@ -18,20 +29,19 @@ fn make_envelope(
     let payload = CanonicalPayload::new(serde_json::json!({"t": logical_time}))
         .map_err(|e| anyhow::anyhow!(e))?;
 
-    let mut envelope = ReceiptEnvelope {
-        envelope_version: SchemaVersion::V1,
-        receipt_type: ReceiptType::Event,
-        context_digest: zero_digest(),
-        schema_digest: zero_digest(),
-        policy_digest: zero_digest(),
-        logical_time: IJsonUInt::new(logical_time)?,
-        event_hash: zero_digest(), // placeholder
-        parent_id,
-        boundary_origin: Some(BoundaryOrigin::Engine),
-        digest_algorithm: None,
-        canonicalization: None,
-        payload,
-    };
+    let logical_time = IJsonUInt::new(logical_time)?;
+    let mut envelope: ReceiptEnvelope = serde_json::from_value(serde_json::json!({
+        "envelope_version": SchemaVersion::V1.get(),
+        "receipt_type": ReceiptType::Event,
+        "context_digest": zero_digest(),
+        "schema_digest": zero_digest(),
+        "policy_digest": zero_digest(),
+        "logical_time": logical_time.get(),
+        "event_hash": zero_digest(),
+        "parent_id": parent_id,
+        "boundary_origin": BoundaryOrigin::Engine,
+        "payload": payload,
+    }))?;
     envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(envelope)
@@ -46,7 +56,7 @@ fn build_chain_json(length: usize) -> Result<Vec<u8>, anyhow::Error> {
         parent = Some(envelope.event_hash);
         envelopes.push(envelope);
     }
-    Ok(vr_jcs::to_canon_bytes(&envelopes)?)
+    canon_bytes(&envelopes)
 }
 
 // ── Byte limit ─────────────────────────────────────────────────────
@@ -58,7 +68,7 @@ fn oversized_single_envelope_rejected() -> Result<(), anyhow::Error> {
         ..VerifierLimits::default()
     };
     let envelope = make_envelope(1, None)?;
-    let json = vr_jcs::to_canon_string(&envelope)?;
+    let json = canon_string(&envelope)?;
     let result = vertrule_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert!(result.errors[0].contains("input too large"));
@@ -143,7 +153,7 @@ fn limit_error_codes_stable_in_verification_result() -> Result<(), anyhow::Error
         ..VerifierLimits::default()
     };
     let envelope = make_envelope(1, None)?;
-    let json = vr_jcs::to_canon_string(&envelope)?;
+    let json = canon_string(&envelope)?;
     let result = vertrule_verifier::verify_receipt_with_limits(json.as_bytes(), &limits);
     assert_eq!(result.status, VerificationStatus::Invalid);
     assert_eq!(result.errors.len(), 1);

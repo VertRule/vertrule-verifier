@@ -183,9 +183,17 @@ fn capture_toolchain() -> Result<(String, String), Box<dyn std::error::Error>> {
 // Hashing helpers
 // ---------------------------------------------------------------------------
 
+/// Typed canonicalization helper (non-deprecated round-trip).
+fn canon_bytes_from_value(
+    value: &serde_json::Value,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let json = serde_json::to_vec(value)?;
+    Ok(vr_jcs::to_canon_bytes_from_slice(&json)?)
+}
+
 /// Compute BLAKE3 hex digest of the JCS-canonical form of a JSON value.
 fn canon_hash(value: &serde_json::Value) -> Result<String, Box<dyn std::error::Error>> {
-    let bytes = vr_jcs::to_canon_bytes(value)?;
+    let bytes = canon_bytes_from_value(value)?;
     Ok(hex::encode(blake3::hash(&bytes).as_bytes()))
 }
 
@@ -216,7 +224,7 @@ fn sign_payload(
     let pk = sk.verifying_key();
 
     // Domain-separated receipt digest
-    let canon_bytes = vr_jcs::to_canon_bytes(payload)?;
+    let canon_bytes = canon_bytes_from_value(payload)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);
@@ -254,7 +262,7 @@ fn write_canonical(
     path: &Path,
     value: &serde_json::Value,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let canon = vr_jcs::to_canon_bytes(value)?;
+    let canon = canon_bytes_from_value(value)?;
     let mut file = std::fs::File::create(path)?;
     file.write_all(&canon)?;
     file.flush()?;

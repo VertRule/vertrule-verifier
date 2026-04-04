@@ -18,7 +18,7 @@ fn valid_canonical_envelope_bytes() -> Result<Vec<u8>, anyhow::Error> {
         "payload": {"key": "value"}
     });
     // Canonicalize for the canonical form check
-    vr_jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
+    crate::canon::typed_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))
 }
 
 vr_test!(
@@ -81,7 +81,7 @@ vr_test!(
             "bogus": 42
         });
         let bytes =
-            vr_jcs::to_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
+            crate::canon::typed_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
         let Err(err) = super::ingest_envelope(&bytes) else {
             anyhow::bail!("expected error, got Ok")
         };
@@ -111,6 +111,51 @@ vr_test!(
             .map_err(|e| anyhow::anyhow!("serialize failed: {e}"))?;
         let Err(err) = super::ingest_chain(&pretty) else {
             anyhow::bail!("expected error, got Ok")
+        };
+        match err {
+            VerifyError::NonCanonical { .. } => {}
+            other => anyhow::bail!("expected NonCanonical, got: {other}"),
+        }
+    }
+);
+
+// ── Empty-chain canonical admission tests ─────────────────────────
+
+vr_test!(
+    fn test_canonical_empty_chain_accepted() {
+        let envelopes = super::ingest_chain(b"[]")?;
+        assert!(envelopes.is_empty());
+    }
+);
+
+vr_test!(
+    fn test_non_canonical_empty_chain_space_rejected() {
+        let Err(err) = super::ingest_chain(b"[ ]") else {
+            anyhow::bail!("expected error for non-canonical empty chain")
+        };
+        match err {
+            VerifyError::NonCanonical { .. } => {}
+            other => anyhow::bail!("expected NonCanonical, got: {other}"),
+        }
+    }
+);
+
+vr_test!(
+    fn test_non_canonical_empty_chain_newline_rejected() {
+        let Err(err) = super::ingest_chain(b"[\n]") else {
+            anyhow::bail!("expected error for non-canonical empty chain")
+        };
+        match err {
+            VerifyError::NonCanonical { .. } => {}
+            other => anyhow::bail!("expected NonCanonical, got: {other}"),
+        }
+    }
+);
+
+vr_test!(
+    fn test_non_canonical_empty_chain_tab_rejected() {
+        let Err(err) = super::ingest_chain(b"[\t]") else {
+            anyhow::bail!("expected error for non-canonical empty chain")
         };
         match err {
             VerifyError::NonCanonical { .. } => {}

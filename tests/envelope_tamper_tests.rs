@@ -9,6 +9,12 @@ use vertrule_schemas::{
     SchemaVersion,
 };
 
+/// Typed canonicalization helper (non-deprecated round-trip).
+fn canon_string(value: &impl serde::Serialize) -> Result<String, anyhow::Error> {
+    let json = serde_json::to_string(value)?;
+    Ok(vr_jcs::to_canon_string_from_str(&json)?)
+}
+
 const fn zero_digest() -> DigestBytes {
     DigestBytes::from_array([0u8; 32])
 }
@@ -21,20 +27,18 @@ fn make_valid_envelope() -> Result<ReceiptEnvelope, anyhow::Error> {
     }))
     .map_err(|e| anyhow::anyhow!(e))?;
 
-    let mut envelope = ReceiptEnvelope {
-        envelope_version: SchemaVersion::V1,
-        receipt_type: ReceiptType::Governance,
-        context_digest: DigestBytes::from_array([0xaa; 32]),
-        schema_digest: DigestBytes::from_array([0xbb; 32]),
-        policy_digest: DigestBytes::from_array([0xcc; 32]),
-        logical_time: IJsonUInt::new(1000)?,
-        event_hash: zero_digest(),
-        parent_id: None,
-        boundary_origin: Some(BoundaryOrigin::Engine),
-        digest_algorithm: None,
-        canonicalization: None,
-        payload,
-    };
+    let logical_time = IJsonUInt::new(1000)?;
+    let mut envelope: ReceiptEnvelope = serde_json::from_value(serde_json::json!({
+        "envelope_version": SchemaVersion::V1.get(),
+        "receipt_type": ReceiptType::Governance,
+        "context_digest": DigestBytes::from_array([0xaa; 32]),
+        "schema_digest": DigestBytes::from_array([0xbb; 32]),
+        "policy_digest": DigestBytes::from_array([0xcc; 32]),
+        "logical_time": logical_time.get(),
+        "event_hash": zero_digest(),
+        "boundary_origin": BoundaryOrigin::Engine,
+        "payload": payload,
+    }))?;
     envelope.event_hash = compute_event_hash(&envelope)?;
     Ok(envelope)
 }
@@ -42,7 +46,7 @@ fn make_valid_envelope() -> Result<ReceiptEnvelope, anyhow::Error> {
 fn verify_envelope(
     envelope: &ReceiptEnvelope,
 ) -> Result<vertrule_verifier::result::VerificationResult, anyhow::Error> {
-    let json = vr_jcs::to_canon_string(envelope)?;
+    let json = canon_string(envelope)?;
     Ok(vertrule_verifier::verify_receipt(json.as_bytes()))
 }
 

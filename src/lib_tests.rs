@@ -24,20 +24,18 @@ fn make_envelope(
     let filler = DigestBytes::from_array([0u8; 32]);
     let canonical = CanonicalPayload::new(payload).map_err(|e| anyhow::anyhow!(e))?;
     let lt = IJsonUInt::new(logical_time).map_err(|e| anyhow::anyhow!(e))?;
-    let mut envelope = ReceiptEnvelope {
-        envelope_version: SchemaVersion::V1,
-        receipt_type: ReceiptType::Governance,
-        context_digest: filler,
-        schema_digest: filler,
-        policy_digest: filler,
-        logical_time: lt,
-        event_hash: filler, // placeholder
-        parent_id,
-        boundary_origin: None,
-        digest_algorithm: None,
-        canonicalization: None,
-        payload: canonical,
-    };
+    let mut envelope: ReceiptEnvelope = serde_json::from_value(json!({
+        "envelope_version": SchemaVersion::V1.get(),
+        "receipt_type": ReceiptType::Governance,
+        "context_digest": filler,
+        "schema_digest": filler,
+        "policy_digest": filler,
+        "logical_time": lt.get(),
+        "event_hash": filler,
+        "parent_id": parent_id,
+        "payload": canonical,
+    }))
+    .map_err(|e| anyhow::anyhow!("envelope: {e}"))?;
     envelope.event_hash = vertrule_schemas::receipts::compute_event_hash(&envelope)
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(envelope)
