@@ -9,8 +9,9 @@ use vertrule_schemas::DigestBytes;
 use crate::error::VerifyError;
 use crate::schema_profile::PROFILE_VERSION;
 
-/// Top-level verification result.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Serializable output of a verification pass, carrying per-check booleans
+/// and any error messages. Serializes to JCS-canonical JSON.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VerificationResult {
     /// Overall status.
     pub status: VerificationStatus,
@@ -40,7 +41,7 @@ pub struct VerificationResult {
     pub errors: Vec<String>,
 }
 
-/// Verification status.
+/// `VALID` when all checks pass; `INVALID` otherwise.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum VerificationStatus {
@@ -50,8 +51,8 @@ pub enum VerificationStatus {
     Invalid,
 }
 
-/// Digest-level validation results.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Per-receipt hash integrity and chain-level ordering checks.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DigestValidation {
     /// All `event_hash` values match their recomputed digests.
     pub all_hashes_match: bool,
@@ -61,8 +62,8 @@ pub struct DigestValidation {
     pub ordering_valid: bool,
 }
 
-/// Chain-level validation metadata.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Envelope count and logical-time bounds for a verified chain.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChainValidation {
     /// Number of envelopes in the chain.
     pub length: usize,
@@ -72,15 +73,15 @@ pub struct ChainValidation {
     pub last_logical_time: u64,
 }
 
-/// Context digest consistency across a chain.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Whether all envelopes in a chain share the same `context_digest`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContextConsistency {
     /// All envelopes share the same `context_digest`.
     pub uniform_context: bool,
 }
 
-/// Policy digest consistency across a chain.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Whether all envelopes in a chain share the same `policy_digest`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PolicyConsistency {
     /// All envelopes share the same `policy_digest`.
     pub stable_policy: bool,
@@ -88,15 +89,15 @@ pub struct PolicyConsistency {
     pub transitions_detected: bool,
 }
 
-/// Schema digest consistency across a chain.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Whether all envelopes in a chain share the same `schema_digest`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SchemaConsistency {
     /// All envelopes share the same `schema_digest`.
     pub uniform_schema: bool,
 }
 
-/// Signature validation results.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Ed25519 signature presence, validity, and `key_id` self-consistency.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SignatureValidation {
     /// Whether a signature bundle was supplied (regardless of parse success).
     /// Malformed bundles still count as present; validity is separate.
@@ -107,10 +108,18 @@ pub struct SignatureValidation {
     /// public key (i.e. `key_id == BLAKE3(public_key)[..12]`).
     ///
     /// This is a self-consistency check, NOT a trust or authority assertion.
-    /// It does not verify that the key belongs to a trusted party, is
-    /// registered in any authority set, or has governance approval.
-    /// Real authority verification requires a trust store (future work).
+    /// Trust evaluation is performed separately via
+    /// [`verify_signed_receipt_with_trust`](crate::verify::verify_signed_receipt_with_trust).
     pub key_id_consistent: bool,
+}
+
+impl std::fmt::Display for VerificationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Valid => f.write_str("VALID"),
+            Self::Invalid => f.write_str("INVALID"),
+        }
+    }
 }
 
 impl VerificationResult {

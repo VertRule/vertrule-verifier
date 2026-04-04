@@ -8,8 +8,8 @@ publish = true
 extraction_ready = true
 
 [dependencies.constitutional]
-vertrule-schemas = "0.2.0"
-vr-jcs = "0.2.0"
+vertrule-schemas = "0.2.2"
+vr-jcs = "0.3.0"
 
 [stage]
 current = 0
@@ -19,3 +19,4 @@ determinism = "canonical"
 determinism = { version = "0.1", digest = "72f890a1caa73c5e87c3a558d0c50bfe43b8a47052bb423697c86c4c27a54487" }
 repo-boundary = { version = "0.1", digest = "311a7ecdc39526ac13d1a1a900a6edf809e5c3c2879baa3028070d636303c565" }
 receipt-canonicalization = { version = "0.1", digest = "0a80d91ac74dc63185a92402ea82bd05f30247d88de8b53a1994f7f98562c10c" }
+numeric-safety = { version = "0.1", digest = "93ef76d701d28abaeb8ab7459ac867e1bb412c7bc52169a706c5da25d9a42eb3" }

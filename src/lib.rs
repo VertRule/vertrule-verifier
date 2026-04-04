@@ -5,21 +5,6 @@
 //! carries **zero** runtime imports: it does not depend on `vertrule-core`,
 //! `vertrule-app`, `vertrule-adapters`, or any other runtime crate.
 //!
-//! ## Dependencies
-//!
-//! Only minimal, well-audited crates:
-//!
-//! | Crate | Purpose |
-//! |-------|---------|
-//! | `vertrule-schemas` | Canonical types (constitutional nouns) |
-//! | `vr-jcs` | JCS canonicalization (RFC 8785) |
-//! | `blake3` | Cryptographic hashing |
-//! | `serde` / `serde_json` | Deserialization |
-//! | `hex` | Hex encoding |
-//! | `ed25519-dalek` | Ed25519 signature verification |
-//! | `base64` | Base64 encoding/decoding |
-//! | `thiserror` | Error derivation |
-//!
 //! ## Verification
 //!
 //! Three levels of verification are provided:

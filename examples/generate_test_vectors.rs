@@ -511,29 +511,11 @@ fn gen_invalid_bit_flip(dir: &std::path::Path) -> Result<(), Box<dyn std::error:
 
     let mut envelope = build_envelope(&payload, 1000, None, "governance")?;
 
-    // Flip one bit in the first byte of event_hash
+    // Flip the low bit of the first hex nibble
     let good_hash = get_hash(&envelope)?;
-    let first_char = good_hash.chars().next().ok_or("empty hash")?;
-    let flipped = match first_char {
-        '0' => '1',
-        '1' => '0',
-        '2' => '3',
-        '3' => '2',
-        '4' => '5',
-        '5' => '4',
-        '6' => '7',
-        '7' => '6',
-        '8' => '9',
-        '9' => '8',
-        'a' => 'b',
-        'b' => 'a',
-        'c' => 'd',
-        'd' => 'c',
-        'e' => 'f',
-        'f' => 'e',
-        _ => return Err("unexpected hex char".into()),
-    };
-    let tampered = format!("{flipped}{}", &good_hash[1..]);
+    let mut hash_bytes = good_hash.into_bytes();
+    hash_bytes[0] ^= 1; // toggles between adjacent hex pairs (0↔1, 2↔3, a↔b, etc.)
+    let tampered = String::from_utf8(hash_bytes).map_err(|_| "non-utf8 after flip")?;
     envelope["event_hash"] = json!(tampered);
 
     let vector = json!({
@@ -717,6 +699,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_invalid_wrong_canonicalization(&dir)?;
     gen_invalid_schema_inconsistent(&dir)?;
 
-    eprintln!("Done. 19 vectors generated.");
+    eprintln!("Done.");
     Ok(())
 }

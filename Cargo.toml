@@ -6,6 +6,7 @@ license = "Apache-2.0"
 description = "Public-facing verifier for VertRule receipt envelopes -- zero runtime deps"
 repository = "https://github.com/VertRule/vertrule-verifier"
 keywords = ["verifier", "receipts", "cryptography", "governance", "canonicalization"]
+authors = ["Dave Ingle"]
 categories = ["cryptography", "command-line-utilities"]
 exclude = [
     ".vr/**",
@@ -19,7 +20,7 @@ exclude = [
 ]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [[bin]]
 name = "vr-verify"
@@ -46,7 +47,7 @@ anyhow = "1"
 
 
 [lints.rust]
-unsafe_code = "warn"
+unsafe_code = "deny"
 unused_extern_crates = "deny"
 unreachable_pub = "deny"
 

@@ -12,9 +12,16 @@ test:
 clippy:
     cargo clippy --all-targets -- -D warnings
 
+# Lint (alias for clippy)
+lint: clippy
+
 # Format check (does not modify files)
 fmt-check:
     cargo fmt -- --check
+
+# Auto-format
+fmt:
+    cargo fmt
 
 # Full local check: build + test + clippy + format
 check: build test clippy fmt-check

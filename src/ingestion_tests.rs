@@ -80,8 +80,8 @@ vr_test!(
             "payload": {"key": "value"},
             "bogus": 42
         });
-        let bytes =
-            crate::canon::typed_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
+        let bytes = crate::canon::typed_canon_bytes(&value)
+            .map_err(|e| anyhow::anyhow!("canon failed: {e}"))?;
         let Err(err) = super::ingest_envelope(&bytes) else {
             anyhow::bail!("expected error, got Ok")
         };

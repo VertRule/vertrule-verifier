@@ -50,12 +50,6 @@ const KNOWN_BOUNDARY_ORIGINS: &[&str] = &[
     "training",
 ];
 
-/// Unknown field policy.
-pub const UNKNOWN_FIELD_POLICY: &str = "FAIL";
-
-/// Missing required field policy.
-pub const MISSING_FIELD_POLICY: &str = "FAIL";
-
 /// Validate that a raw JSON value conforms to the v1 envelope schema profile.
 ///
 /// Checks:

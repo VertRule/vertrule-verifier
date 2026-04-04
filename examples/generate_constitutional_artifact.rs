@@ -213,18 +213,23 @@ fn compute_context_digest(
 // Signing
 // ---------------------------------------------------------------------------
 
-/// Sign a payload following the exact protocol from `generate_test_vectors.rs`.
+/// Sign an envelope following the exact protocol from `generate_test_vectors.rs`.
 ///
-/// Key constraint: signature is over the **payload** (not the envelope).
-fn sign_payload(
-    payload: &serde_json::Value,
+/// The receipt digest covers `JCS(envelope \ {event_hash})`, matching the
+/// verifier's `compute_receipt_digest` in `src/signature.rs`.
+fn sign_envelope(
+    envelope: &serde_json::Value,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let seed: [u8; 32] = [42u8; 32];
     let sk = SigningKey::from_bytes(&seed);
     let pk = sk.verifying_key();
 
-    // Domain-separated receipt digest
-    let canon_bytes = canon_bytes_from_value(payload)?;
+    // Domain-separated receipt digest over envelope \ {event_hash}
+    let mut commitment_value = envelope.clone();
+    if let serde_json::Value::Object(ref mut map) = commitment_value {
+        map.remove("event_hash");
+    }
+    let canon_bytes = canon_bytes_from_value(&commitment_value)?;
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"VR-ReceiptDigest|v1|");
     hasher.update(&canon_bytes);
@@ -375,8 +380,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for spec in CONSTITUTIONAL_CRATES {
         let spec_dir = repositories_root.join(spec.source_rel);
-        let manifest_path = spec_dir.join("governance").join("manifest.toml");
+        let manifest_path = spec_dir
+            .join(".vr")
+            .join("governance")
+            .join("manifest.toml");
         let known_nd_path = spec_dir
+            .join(".vr")
             .join("governance")
             .join("known-nondeterminism.toml");
 
@@ -409,9 +418,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         });
 
-        let event_hash = canon_hash(&payload)?;
-
-        // Build envelope
+        // Build envelope without event_hash (full-envelope commitment protocol)
         let mut envelope = json!({
             "envelope_version": 1,
             "receipt_type": "governance",
@@ -419,7 +426,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "schema_digest": schema_digest_hex,
             "policy_digest": policy_digest_hex,
             "logical_time": spec.logical_time,
-            "event_hash": event_hash,
             "boundary_origin": "governance",
             "payload": payload,
         });
@@ -428,8 +434,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             envelope["parent_id"] = json!(pid);
         }
 
-        // Sign the payload
-        let sig_bundle = sign_payload(&payload)?;
+        // event_hash = BLAKE3(JCS(envelope \ {event_hash}))
+        let event_hash = canon_hash(&envelope)?;
+        envelope["event_hash"] = json!(&event_hash);
+
+        // Sign the envelope (full-envelope commitment, not payload-only)
+        let sig_bundle = sign_envelope(&envelope)?;
 
         // Write envelope
         let env_path = out_dir.join(format!("{}.json", spec.name));

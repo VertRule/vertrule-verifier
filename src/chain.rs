@@ -70,44 +70,38 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
         linkage_ok = false;
     }
 
-    // Context consistency: all must match first envelope.
-    let expected_context = &first.context_digest;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.context_digest != *expected_context {
-            errors.push(VerifyError::ContextInconsistent {
-                index: i,
-                expected: *expected_context,
-                found: env.context_digest,
-            });
-            context_uniform = false;
-        }
-    }
+    context_uniform = check_uniform(
+        envelopes,
+        |e| e.context_digest,
+        |i, expected, found| VerifyError::ContextInconsistent {
+            index: i,
+            expected,
+            found,
+        },
+        &mut errors,
+    );
 
-    // Policy consistency: all must match first envelope.
-    let expected_policy = &first.policy_digest;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.policy_digest != *expected_policy {
-            errors.push(VerifyError::PolicyInconsistent {
-                index: i,
-                expected: *expected_policy,
-                found: env.policy_digest,
-            });
-            policy_stable = false;
-        }
-    }
+    policy_stable = check_uniform(
+        envelopes,
+        |e| e.policy_digest,
+        |i, expected, found| VerifyError::PolicyInconsistent {
+            index: i,
+            expected,
+            found,
+        },
+        &mut errors,
+    );
 
-    // Schema consistency: all must match first envelope.
-    let expected_schema = &first.schema_digest;
-    for (i, env) in envelopes.iter().enumerate().skip(1) {
-        if env.schema_digest != *expected_schema {
-            errors.push(VerifyError::SchemaInconsistent {
-                index: i,
-                expected: *expected_schema,
-                found: env.schema_digest,
-            });
-            schema_uniform = false;
-        }
-    }
+    schema_uniform = check_uniform(
+        envelopes,
+        |e| e.schema_digest,
+        |i, expected, found| VerifyError::SchemaInconsistent {
+            index: i,
+            expected,
+            found,
+        },
+        &mut errors,
+    );
 
     // Per-pair checks + duplicate detection.
     let mut seen_hashes = BTreeSet::new();
@@ -158,20 +152,36 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
     }
 }
 
-/// Verify all chain invariants across a sequence of envelopes.
+/// Check that a digest field is uniform across all envelopes (matching the first).
+fn check_uniform(
+    envelopes: &[ReceiptEnvelope],
+    field: fn(&ReceiptEnvelope) -> vertrule_schemas::DigestBytes,
+    make_err: fn(
+        usize,
+        vertrule_schemas::DigestBytes,
+        vertrule_schemas::DigestBytes,
+    ) -> VerifyError,
+    errors: &mut Vec<VerifyError>,
+) -> bool {
+    let expected = field(&envelopes[0]);
+    let mut uniform = true;
+    for (i, env) in envelopes.iter().enumerate().skip(1) {
+        let found = field(env);
+        if found != expected {
+            errors.push(make_err(i, expected, found));
+            uniform = false;
+        }
+    }
+    uniform
+}
+
+/// Verify all chain invariants, returning the first violation found.
 ///
-/// An empty slice is considered a valid (vacuously true) chain.
-///
-/// Checks (in order):
-/// - First envelope has no parent
-/// - Context digest consistency (all match first)
-/// - Policy digest consistency (all match first)
-/// - Schema digest consistency (all match first)
-/// - Per-pair: parent linkage, logical time monotonicity, duplicate detection
+/// An empty slice is vacuously valid.
 ///
 /// # Errors
 ///
-/// Returns the first violation found.
+/// Returns the first [`VerifyError`] from `check_chain_detail`.
 pub fn verify_chain(envelopes: &[ReceiptEnvelope]) -> Result<(), VerifyError> {
     let detail = check_chain_detail(envelopes);
     match detail.errors.into_iter().next() {

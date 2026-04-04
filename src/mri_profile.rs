@@ -81,7 +81,7 @@ pub fn validate_mri_batch_payload(payload: &MriBatchPayload) -> Result<(), Verif
 /// Validate the structural invariants of a [`GradientCouplingPayload`].
 ///
 /// # Checks
-/// - `schema` must equal `"mri2.gradient_coupling@0.1"`
+/// - `schema` must equal `"vr.mri.gradient_coupling@0.1"`
 /// - `num_layers` must be > 0
 /// - All vector fields must have length == `num_layers`
 /// - All decoded `F32Bits` values must be finite

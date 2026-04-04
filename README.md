@@ -155,7 +155,7 @@ v1 envelope schema. A sync test ensures the profile and code constants match.
 - No streaming verification -- entire chain must fit in memory
 - No policy evaluation -- only structural and cryptographic checks
 - Signature verification requires the public key to be supplied externally
-- No certificate chain or key revocation checking
+- No certificate chain validation
 
 ## License
 

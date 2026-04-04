@@ -30,20 +30,31 @@ fn result_to_json(result: &VerificationResult) -> String {
     }
 }
 
-/// Produce a minimal error JSON when result serialization itself fails.
+/// Produce a minimal JCS-canonical error JSON when result serialization fails.
 ///
 /// This is a last-resort fallback — it should never be reached in practice.
+/// Serializes via `serde_json`, then canonicalizes via `vr_jcs`. If either
+/// step fails, falls back to a static JCS-canonical string.
 fn error_json(message: &str) -> String {
-    // Manual construction avoids depending on serde for the fallback path.
-    // Fields are in JCS sort order (alphabetical).
-    let escaped = message
-        .replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-        .replace('\t', "\\t")
-        .replace(|c: char| c.is_control(), "");
-    format!("{{\"errors\":[\"{escaped}\"],\"status\":\"INTERNAL_VERIFIER_ERROR\"}}")
+    #[derive(serde::Serialize)]
+    struct FallbackError<'a> {
+        errors: [&'a str; 1],
+        status: &'a str,
+    }
+    // Static fallback is pre-verified JCS-canonical (keys in lex order, no whitespace).
+    const STATIC_FALLBACK: &str = r#"{"errors":["internal verifier error"],"status":"INVALID"}"#;
+
+    let payload = FallbackError {
+        errors: [message],
+        status: "INVALID",
+    };
+    let Ok(json_str) = serde_json::to_string(&payload) else {
+        return STATIC_FALLBACK.to_string();
+    };
+    match vr_jcs::to_canon_string_from_str(&json_str) {
+        Ok(s) => s,
+        Err(_) => STATIC_FALLBACK.to_string(),
+    }
 }
 
 /// Verify a single receipt envelope.

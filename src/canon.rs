@@ -28,8 +28,7 @@ use crate::error::VerifyError;
 /// [`VerifyError::NonCanonical`] for canonicalization mismatches
 /// or I-JSON constraint violations.
 pub(crate) fn admit_canonical_bytes(raw: &[u8]) -> Result<(), VerifyError> {
-    let canonical =
-        vr_jcs::to_canon_bytes_from_slice(raw).map_err(|e| jcs_admission_error(&e))?;
+    let canonical = vr_jcs::to_canon_bytes_from_slice(raw).map_err(|e| jcs_admission_error(&e))?;
     if raw != canonical.as_slice() {
         return Err(VerifyError::NonCanonical {
             reason: "input is not in JCS canonical form".to_string(),
@@ -49,10 +48,8 @@ pub(crate) fn admit_canonical_bytes(raw: &[u8]) -> Result<(), VerifyError> {
 /// Returns [`VerifyError::Canon`] on serialization or
 /// canonicalization failure.
 pub(crate) fn typed_canon_bytes(value: &serde_json::Value) -> Result<Vec<u8>, VerifyError> {
-    let json_bytes =
-        serde_json::to_vec(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    vr_jcs::to_canon_bytes_from_slice(&json_bytes)
-        .map_err(|e| VerifyError::Canon(format!("{e}")))
+    let json_bytes = serde_json::to_vec(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    vr_jcs::to_canon_bytes_from_slice(&json_bytes).map_err(|e| VerifyError::Canon(format!("{e}")))
 }
 
 /// Canonicalize a pre-validated [`serde_json::Value`] to a string.
@@ -64,8 +61,7 @@ pub(crate) fn typed_canon_bytes(value: &serde_json::Value) -> Result<Vec<u8>, Ve
 /// Returns [`VerifyError::Canon`] on serialization or
 /// canonicalization failure.
 pub(crate) fn typed_canon_string(value: &serde_json::Value) -> Result<String, VerifyError> {
-    let json =
-        serde_json::to_string(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let json = serde_json::to_string(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
     vr_jcs::to_canon_string_from_str(&json).map_err(|e| VerifyError::Canon(format!("{e}")))
 }
 

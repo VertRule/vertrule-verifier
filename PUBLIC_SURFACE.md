@@ -22,7 +22,7 @@ pub fn verify_signed_receipt_with_trust(
     raw_bytes: &[u8], sig_bytes: &[u8],
     authority_set: &AuthoritySet, trust_policy: &TrustPolicy,
 ) -> VerificationResult;
-pub fn verify_chain(envelopes: &[ReceiptEnvelope]) -> ChainDetail;
+pub fn verify_chain(envelopes: &[ReceiptEnvelope]) -> Result<(), VerifyError>;
 ```
 
 ### Envelope integrity (re-homed from vertrule-schemas)
@@ -82,14 +82,14 @@ vr-verify signed <receipt-file> <signature-file>
 ## Types available via submodule path (not root-exported)
 
 ```rust
-vr_verifier::result::VerificationResult
-vr_verifier::result::VerificationStatus
-vr_verifier::result::DigestValidation
-vr_verifier::result::ChainValidation
-vr_verifier::result::ContextConsistency
-vr_verifier::result::PolicyConsistency
-vr_verifier::result::SchemaConsistency
-vr_verifier::result::SignatureValidation
+vertrule_verifier::result::VerificationResult
+vertrule_verifier::result::VerificationStatus
+vertrule_verifier::result::DigestValidation
+vertrule_verifier::result::ChainValidation
+vertrule_verifier::result::ContextConsistency
+vertrule_verifier::result::PolicyConsistency
+vertrule_verifier::result::SchemaConsistency
+vertrule_verifier::result::SignatureValidation
 ```
 
 ## Semantic Contracts

@@ -1,6 +1,4 @@
 //! Tests for `vertrule-verifier`.
-//!
-//! Uses `vr_test!` from `vr-kernel-testutils` (zero runtime deps).
 
 use serde_json::json;
 

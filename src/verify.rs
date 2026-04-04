@@ -27,53 +27,27 @@ use crate::signature::{verify_signature, SignatureBundle};
 /// event hash verification. Errors are collected into the result.
 #[must_use]
 pub fn verify_receipt(raw_bytes: &[u8]) -> VerificationResult {
-    let envelope = match ingest_envelope(raw_bytes) {
-        Ok(pair) => pair,
-        Err(e) => return VerificationResult::invalid(e.to_string()),
-    };
-
-    let mut result = VerificationResult::valid_single();
-
-    if let Err(e) = verify_envelope_version(&envelope) {
-        result.add_error(e.to_string());
+    match ingest_envelope(raw_bytes) {
+        Ok(envelope) => verify_single_envelope(&envelope),
+        Err(e) => VerificationResult::invalid(e.to_string()),
     }
-
-    if let Err(e) = verify_algorithms(&envelope) {
-        result.add_error(e.to_string());
-    }
-
-    if let Err(e) = verify_event_hash(&envelope) {
-        result.digest_validation.all_hashes_match = false;
-        result.add_error(e.to_string());
-    }
-
-    result
 }
 
 /// Verify a single receipt envelope with configurable limits.
+///
+/// Same checks as [`verify_receipt`] but applies `limits` during ingestion
+/// to bound input size and JSON structure complexity.
+///
+/// # Errors
+///
+/// Limit violations, non-canonical input, version mismatches, and
+/// digest failures are collected into the returned result.
 #[must_use]
 pub fn verify_receipt_with_limits(raw_bytes: &[u8], limits: &VerifierLimits) -> VerificationResult {
-    let envelope = match ingest_envelope_with_limits(raw_bytes, limits) {
-        Ok(pair) => pair,
-        Err(e) => return VerificationResult::invalid(e.to_string()),
-    };
-
-    let mut result = VerificationResult::valid_single();
-
-    if let Err(e) = verify_envelope_version(&envelope) {
-        result.add_error(e.to_string());
+    match ingest_envelope_with_limits(raw_bytes, limits) {
+        Ok(envelope) => verify_single_envelope(&envelope),
+        Err(e) => VerificationResult::invalid(e.to_string()),
     }
-
-    if let Err(e) = verify_algorithms(&envelope) {
-        result.add_error(e.to_string());
-    }
-
-    if let Err(e) = verify_event_hash(&envelope) {
-        result.digest_validation.all_hashes_match = false;
-        result.add_error(e.to_string());
-    }
-
-    result
 }
 
 /// Verify a chain of receipt envelopes from raw JSON bytes (JSON array).
@@ -83,123 +57,30 @@ pub fn verify_receipt_with_limits(raw_bytes: &[u8], limits: &VerifierLimits) -> 
 /// consistency, duplicate detection). Errors are collected into the result.
 #[must_use]
 pub fn verify_receipt_chain(raw_bytes: &[u8]) -> VerificationResult {
-    let envelopes = match ingest_chain(raw_bytes) {
-        Ok(pair) => pair,
-        Err(e) => return VerificationResult::invalid(e.to_string()),
-    };
-
-    if envelopes.is_empty() {
-        let mut result = VerificationResult::valid_single();
-        result.chain_validation = Some(ChainValidation {
-            length: 0,
-            first_logical_time: 0,
-            last_logical_time: 0,
-        });
-        return result;
+    match ingest_chain(raw_bytes) {
+        Ok(envelopes) => verify_chain_envelopes(&envelopes),
+        Err(e) => VerificationResult::invalid(e.to_string()),
     }
-
-    let mut result = VerificationResult::valid_single();
-
-    // Per-envelope checks (version, algorithms, event_hash)
-    let all_hashes_match = check_per_envelope(&envelopes, &mut result);
-
-    // Chain invariants (single source of truth in chain module)
-    let detail = check_chain_detail(&envelopes);
-    for e in &detail.errors {
-        result.add_error(e.to_string());
-    }
-
-    // Assemble result fields
-    let first = &envelopes[0];
-    let last = &envelopes[envelopes.len() - 1];
-
-    result.digest_validation = DigestValidation {
-        all_hashes_match,
-        chain_integrity: detail.linkage_ok,
-        ordering_valid: detail.ordering_ok,
-    };
-
-    result.chain_validation = Some(ChainValidation {
-        length: envelopes.len(),
-        first_logical_time: first.logical_time.get(),
-        last_logical_time: last.logical_time.get(),
-    });
-
-    result.context_consistency = Some(ContextConsistency {
-        uniform_context: detail.context_uniform,
-    });
-
-    result.policy_consistency = Some(PolicyConsistency {
-        stable_policy: detail.policy_stable,
-        transitions_detected: !detail.policy_stable,
-    });
-
-    result.schema_consistency = Some(SchemaConsistency {
-        uniform_schema: detail.schema_uniform,
-    });
-
-    result
 }
 
 /// Verify a chain of receipt envelopes with configurable limits.
+///
+/// Same checks as [`verify_receipt_chain`] but applies `limits` during
+/// ingestion to bound input size, JSON structure complexity, and chain length.
+///
+/// # Errors
+///
+/// Limit violations, chain linkage breaks, time monotonicity violations,
+/// and consistency failures are collected into the returned result.
 #[must_use]
 pub fn verify_receipt_chain_with_limits(
     raw_bytes: &[u8],
     limits: &VerifierLimits,
 ) -> VerificationResult {
-    let envelopes = match ingest_chain_with_limits(raw_bytes, limits) {
-        Ok(pair) => pair,
-        Err(e) => return VerificationResult::invalid(e.to_string()),
-    };
-
-    if envelopes.is_empty() {
-        let mut result = VerificationResult::valid_single();
-        result.chain_validation = Some(ChainValidation {
-            length: 0,
-            first_logical_time: 0,
-            last_logical_time: 0,
-        });
-        return result;
+    match ingest_chain_with_limits(raw_bytes, limits) {
+        Ok(envelopes) => verify_chain_envelopes(&envelopes),
+        Err(e) => VerificationResult::invalid(e.to_string()),
     }
-
-    let mut result = VerificationResult::valid_single();
-
-    let all_hashes_match = check_per_envelope(&envelopes, &mut result);
-
-    let detail = check_chain_detail(&envelopes);
-    for e in &detail.errors {
-        result.add_error(e.to_string());
-    }
-
-    let first = &envelopes[0];
-    let last = &envelopes[envelopes.len() - 1];
-
-    result.digest_validation = DigestValidation {
-        all_hashes_match,
-        chain_integrity: detail.linkage_ok,
-        ordering_valid: detail.ordering_ok,
-    };
-
-    result.chain_validation = Some(ChainValidation {
-        length: envelopes.len(),
-        first_logical_time: first.logical_time.get(),
-        last_logical_time: last.logical_time.get(),
-    });
-
-    result.context_consistency = Some(ContextConsistency {
-        uniform_context: detail.context_uniform,
-    });
-
-    result.policy_consistency = Some(PolicyConsistency {
-        stable_policy: detail.policy_stable,
-        transitions_detected: !detail.policy_stable,
-    });
-
-    result.schema_consistency = Some(SchemaConsistency {
-        uniform_schema: detail.schema_uniform,
-    });
-
-    result
 }
 
 /// Verify a single receipt envelope with an Ed25519 signature bundle.
@@ -214,55 +95,8 @@ pub fn verify_signed_receipt(raw_bytes: &[u8], sig_bytes: &[u8]) -> Verification
         Err(e) => return VerificationResult::invalid(e.to_string()),
     };
 
-    let mut result = VerificationResult::valid_single();
-
-    if let Err(e) = verify_envelope_version(&envelope) {
-        result.add_error(e.to_string());
-    }
-
-    if let Err(e) = verify_algorithms(&envelope) {
-        result.add_error(e.to_string());
-    }
-
-    if let Err(e) = verify_event_hash(&envelope) {
-        result.digest_validation.all_hashes_match = false;
-        result.add_error(e.to_string());
-    }
-
-    // Parse signature bundle — present is true because bytes were supplied,
-    // regardless of whether they parse successfully.
-    let bundle: SignatureBundle = match serde_json::from_slice(sig_bytes) {
-        Ok(b) => b,
-        Err(e) => {
-            result.add_error(format!("invalid signature bundle: {e}"));
-            result.signature_validation = Some(SignatureValidation {
-                present: true,
-                valid: false,
-                key_id_consistent: false,
-            });
-            return result;
-        }
-    };
-
-    // Verify signature (full-envelope commitment)
-    match verify_signature(&envelope, &bundle) {
-        Ok(()) => {
-            result.signature_validation = Some(SignatureValidation {
-                present: true,
-                valid: true,
-                key_id_consistent: true,
-            });
-        }
-        Err(e) => {
-            result.add_error(e.to_string());
-            result.signature_validation = Some(SignatureValidation {
-                present: true,
-                valid: false,
-                key_id_consistent: false,
-            });
-        }
-    }
-
+    let mut result = verify_single_envelope(&envelope);
+    verify_signature_bundle(&envelope, sig_bytes, &mut result);
     result
 }
 
@@ -284,22 +118,105 @@ pub fn verify_signed_receipt_with_trust(
         Err(e) => return VerificationResult::invalid(e.to_string()),
     };
 
+    let mut result = verify_single_envelope(&envelope);
+    let bundle = verify_signature_bundle(&envelope, sig_bytes, &mut result);
+
+    // Trust evaluation requires a successfully parsed bundle.
+    if let Some(bundle) = bundle {
+        let trust = crate::trust::evaluate_trust(&bundle.key_id, authority_set, trust_policy);
+        if trust.status != crate::trust::TrustStatus::Trusted {
+            result.add_error(format!("trust: {}", trust.status));
+        }
+        result.trust_validation = Some(trust);
+    }
+
+    result
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+/// Run version, algorithm, and event-hash checks on a single envelope.
+fn verify_single_envelope(envelope: &ReceiptEnvelope) -> VerificationResult {
     let mut result = VerificationResult::valid_single();
 
-    if let Err(e) = verify_envelope_version(&envelope) {
+    if let Err(e) = verify_envelope_version(envelope) {
         result.add_error(e.to_string());
     }
 
-    if let Err(e) = verify_algorithms(&envelope) {
+    if let Err(e) = verify_algorithms(envelope) {
         result.add_error(e.to_string());
     }
 
-    if let Err(e) = verify_event_hash(&envelope) {
+    if let Err(e) = verify_event_hash(envelope) {
         result.digest_validation.all_hashes_match = false;
         result.add_error(e.to_string());
     }
 
-    // Parse signature bundle — present is true because bytes were supplied.
+    result
+}
+
+/// Assemble a chain result from already-ingested envelopes.
+fn verify_chain_envelopes(envelopes: &[ReceiptEnvelope]) -> VerificationResult {
+    if envelopes.is_empty() {
+        let mut result = VerificationResult::valid_single();
+        result.chain_validation = Some(ChainValidation {
+            length: 0,
+            first_logical_time: 0,
+            last_logical_time: 0,
+        });
+        return result;
+    }
+
+    let mut result = VerificationResult::valid_single();
+    let all_hashes_match = check_per_envelope(envelopes, &mut result);
+
+    let detail = check_chain_detail(envelopes);
+    for e in &detail.errors {
+        result.add_error(e.to_string());
+    }
+
+    let first = &envelopes[0];
+    let last = &envelopes[envelopes.len() - 1];
+
+    result.digest_validation = DigestValidation {
+        all_hashes_match,
+        chain_integrity: detail.linkage_ok,
+        ordering_valid: detail.ordering_ok,
+    };
+
+    result.chain_validation = Some(ChainValidation {
+        length: envelopes.len(),
+        first_logical_time: first.logical_time.get(),
+        last_logical_time: last.logical_time.get(),
+    });
+
+    result.context_consistency = Some(ContextConsistency {
+        uniform_context: detail.context_uniform,
+    });
+
+    result.policy_consistency = Some(PolicyConsistency {
+        stable_policy: detail.policy_stable,
+        transitions_detected: !detail.policy_stable,
+    });
+
+    result.schema_consistency = Some(SchemaConsistency {
+        uniform_schema: detail.schema_uniform,
+    });
+
+    result
+}
+
+/// Parse and verify a signature bundle, updating `result` in place.
+///
+/// Returns the parsed bundle on success (needed for trust evaluation).
+fn verify_signature_bundle(
+    envelope: &ReceiptEnvelope,
+    sig_bytes: &[u8],
+    result: &mut VerificationResult,
+) -> Option<SignatureBundle> {
+    // Present is true because bytes were supplied, regardless of parse success.
     let bundle: SignatureBundle = match serde_json::from_slice(sig_bytes) {
         Ok(b) => b,
         Err(e) => {
@@ -309,12 +226,11 @@ pub fn verify_signed_receipt_with_trust(
                 valid: false,
                 key_id_consistent: false,
             });
-            return result;
+            return None;
         }
     };
 
-    // Verify signature
-    match verify_signature(&envelope, &bundle) {
+    match verify_signature(envelope, &bundle) {
         Ok(()) => {
             result.signature_validation = Some(SignatureValidation {
                 present: true,
@@ -329,18 +245,11 @@ pub fn verify_signed_receipt_with_trust(
                 valid: false,
                 key_id_consistent: false,
             });
-            return result;
+            return None;
         }
     }
 
-    // Trust evaluation against authority set
-    let trust = crate::trust::evaluate_trust(&bundle.key_id, authority_set, trust_policy);
-    if trust.status != crate::trust::TrustStatus::Trusted {
-        result.add_error(format!("trust: {}", trust.status));
-    }
-    result.trust_validation = Some(trust);
-
-    result
+    Some(bundle)
 }
 
 /// Check version and `event_hash` for each envelope. Returns `all_hashes_match`.

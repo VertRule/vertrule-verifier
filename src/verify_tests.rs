@@ -109,8 +109,8 @@ vr_test!(
             serde_json::json!("b".repeat(64)),
         );
         let value = serde_json::Value::Object(obj);
-        let bytes =
-            crate::canon::typed_canon_bytes(&value).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = crate::canon::typed_canon_bytes(&value)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -158,8 +158,8 @@ vr_test!(
             build_envelope_value(1001, Some(&"f".repeat(64)), serde_json::json!({"index": 1}))?;
 
         let array = serde_json::Value::Array(vec![env0, env1]);
-        let bytes =
-            crate::canon::typed_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = crate::canon::typed_canon_bytes(&array)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -175,8 +175,8 @@ vr_test!(
             build_envelope_value(1000, Some(&hash0), serde_json::json!({"index": 1}))?;
 
         let array = serde_json::Value::Array(vec![env0, env1]);
-        let bytes =
-            crate::canon::typed_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = crate::canon::typed_canon_bytes(&array)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);
@@ -207,8 +207,8 @@ vr_test!(
         env1_val["schema_digest"] = serde_json::json!("f".repeat(64));
 
         let array = serde_json::Value::Array(vec![env0, env1_val]);
-        let bytes =
-            crate::canon::typed_canon_bytes(&array).map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
+        let bytes = crate::canon::typed_canon_bytes(&array)
+            .map_err(|e| anyhow::anyhow!("canonicalization: {e}"))?;
 
         let result = super::verify_receipt_chain(&bytes);
         assert_eq!(result.status, VerificationStatus::Invalid);

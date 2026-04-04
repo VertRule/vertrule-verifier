@@ -10,12 +10,16 @@ Governed by Repo State Standard v1.
 .vr/
   README.md
   governance/
-    policies/
-    authorities/
+    bindings/
+    overlays/
+    exemptions/
     manifest.toml
     known-nondeterminism.toml
+  capabilities/
   receipts/
     governance/
+    capabilities/
+    local/
   state/
   public/
   tmp/

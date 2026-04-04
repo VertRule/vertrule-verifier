@@ -3,13 +3,14 @@
 //! Prevents denial-of-service via oversized inputs. All limits have
 //! sensible defaults; callers may tighten them via [`VerifierLimits`].
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Configurable resource limits for the verifier.
 ///
 /// Every field has a default that is generous for legitimate receipts
 /// but rejects adversarial inputs.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VerifierLimits {
     /// Maximum raw input size in bytes (default: 1 MiB).
     pub max_bytes: usize,
@@ -39,102 +40,48 @@ impl Default for VerifierLimits {
 }
 
 /// Stable error codes for limit violations.
+///
+/// Every variant carries `actual` (what was measured) and `limit` (the threshold).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum LimitViolation {
     /// Input exceeds [`VerifierLimits::max_bytes`].
-    InputTooLarge {
-        /// Actual byte count.
-        actual: usize,
-        /// Configured limit.
-        limit: usize,
-    },
+    InputTooLarge { actual: usize, limit: usize },
     /// JSON nesting exceeds [`VerifierLimits::max_depth`].
-    DepthExceeded {
-        /// Actual depth.
-        actual: usize,
-        /// Configured limit.
-        limit: usize,
-    },
+    DepthExceeded { actual: usize, limit: usize },
     /// Total node count exceeds [`VerifierLimits::max_node_count`].
-    NodeCountExceeded {
-        /// Actual count.
-        actual: usize,
-        /// Configured limit.
-        limit: usize,
-    },
+    NodeCountExceeded { actual: usize, limit: usize },
     /// A single JSON object has too many keys.
-    ObjectTooLarge {
-        /// Actual key count.
-        actual: usize,
-        /// Configured limit.
-        limit: usize,
-    },
+    ObjectTooLarge { actual: usize, limit: usize },
     /// A single JSON array has too many elements.
-    ArrayTooLarge {
-        /// Actual element count.
-        actual: usize,
-        /// Configured limit.
-        limit: usize,
-    },
+    ArrayTooLarge { actual: usize, limit: usize },
     /// Receipt chain has too many envelopes.
-    ChainTooLong {
-        /// Actual chain length.
-        actual: usize,
-        /// Configured limit.
-        limit: usize,
-    },
+    ChainTooLong { actual: usize, limit: usize },
 }
 
 impl std::error::Error for LimitViolation {}
 
 impl std::fmt::Display for LimitViolation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InputTooLarge { actual, limit } => {
-                write!(
-                    f,
-                    "input too large: {actual} bytes exceeds limit of {limit}"
-                )
-            }
-            Self::DepthExceeded { actual, limit } => {
-                write!(
-                    f,
-                    "depth exceeded: {actual} levels exceeds limit of {limit}"
-                )
-            }
+        let (label, actual, unit, limit) = match *self {
+            Self::InputTooLarge { actual, limit } => ("input too large", actual, "bytes", limit),
+            Self::DepthExceeded { actual, limit } => ("depth exceeded", actual, "levels", limit),
             Self::NodeCountExceeded { actual, limit } => {
-                write!(
-                    f,
-                    "node count exceeded: {actual} nodes exceeds limit of {limit}"
-                )
+                ("node count exceeded", actual, "nodes", limit)
             }
-            Self::ObjectTooLarge { actual, limit } => {
-                write!(
-                    f,
-                    "object too large: {actual} keys exceeds limit of {limit}"
-                )
-            }
-            Self::ArrayTooLarge { actual, limit } => {
-                write!(
-                    f,
-                    "array too large: {actual} elements exceeds limit of {limit}"
-                )
-            }
-            Self::ChainTooLong { actual, limit } => {
-                write!(
-                    f,
-                    "chain too long: {actual} envelopes exceeds limit of {limit}"
-                )
-            }
-        }
+            Self::ObjectTooLarge { actual, limit } => ("object too large", actual, "keys", limit),
+            Self::ArrayTooLarge { actual, limit } => ("array too large", actual, "elements", limit),
+            Self::ChainTooLong { actual, limit } => ("chain too long", actual, "envelopes", limit),
+        };
+        write!(f, "{label}: {actual} {unit} exceeds limit of {limit}")
     }
 }
 
-/// Check raw input byte size.
+/// Check raw input byte size against `limits.max_bytes`.
 ///
 /// # Errors
 ///
-/// Returns [`LimitViolation::InputTooLarge`] if `raw_bytes.len()` exceeds the limit.
+/// Returns [`LimitViolation::InputTooLarge`] if exceeded.
 pub const fn check_byte_limit(
     raw_bytes: &[u8],
     limits: &VerifierLimits,
@@ -148,11 +95,11 @@ pub const fn check_byte_limit(
     Ok(())
 }
 
-/// Check chain length.
+/// Check chain length against `limits.max_chain_length`.
 ///
 /// # Errors
 ///
-/// Returns [`LimitViolation::ChainTooLong`] if `length` exceeds the limit.
+/// Returns [`LimitViolation::ChainTooLong`] if exceeded.
 pub const fn check_chain_length(
     length: usize,
     limits: &VerifierLimits,

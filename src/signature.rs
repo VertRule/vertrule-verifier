@@ -109,7 +109,7 @@ impl<'de> Deserialize<'de> for KeyId {
 ///
 /// Mirrors `SignatureData` from `vertrule-crypto` plus the `timestamp` field
 /// needed to reconstruct the canonical signed message.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SignatureBundle {
     /// Signature algorithm (must be `"Ed25519"`).
@@ -151,8 +151,16 @@ pub fn compute_receipt_digest(
 ) -> Result<DigestBytes, VerifyError> {
     let mut value =
         serde_json::to_value(envelope).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    if let serde_json::Value::Object(ref mut map) = value {
-        map.remove("event_hash");
+    let serde_json::Value::Object(ref mut map) = value else {
+        return Err(VerifyError::Canon(
+            "serialized envelope is not a JSON object".to_string(),
+        ));
+    };
+    if map.remove("event_hash").is_none() {
+        return Err(VerifyError::SignatureDataMalformed {
+            reason: "receipt envelope missing top-level event_hash during digest construction"
+                .to_string(),
+        });
     }
     let canon_bytes = crate::canon::typed_canon_bytes(&value)?;
 
@@ -236,30 +244,24 @@ fn validate_metadata(bundle: &SignatureBundle) -> Result<(), VerifyError> {
     Ok(())
 }
 
-/// Decode a base64 public key into a `VerifyingKey`.
-fn decode_public_key(b64: &str) -> Result<VerifyingKey, VerifyError> {
-    let pk_bytes = base64::engine::general_purpose::STANDARD
+/// Decode a base64 string into a fixed-length byte array.
+fn decode_b64_fixed<const N: usize>(b64: &str, label: &str) -> Result<[u8; N], VerifyError> {
+    let bytes = base64::engine::general_purpose::STANDARD
         .decode(b64)
         .map_err(|e| VerifyError::SignatureDataMalformed {
-            reason: format!("invalid public key base64: {e}"),
+            reason: format!("invalid {label} base64: {e}"),
         })?;
 
-    if pk_bytes.len() != ED25519_PK_LEN {
-        return Err(VerifyError::SignatureDataMalformed {
-            reason: format!(
-                "public key wrong length: expected {ED25519_PK_LEN}, got {}",
-                pk_bytes.len()
-            ),
-        });
-    }
+    bytes
+        .try_into()
+        .map_err(|bytes: Vec<u8>| VerifyError::SignatureDataMalformed {
+            reason: format!("{label} wrong length: expected {N}, got {}", bytes.len()),
+        })
+}
 
-    let pk_array: [u8; 32] =
-        pk_bytes
-            .try_into()
-            .map_err(|_| VerifyError::SignatureDataMalformed {
-                reason: "public key conversion failed".to_string(),
-            })?;
-
+/// Decode a base64 public key into a `VerifyingKey`.
+fn decode_public_key(b64: &str) -> Result<VerifyingKey, VerifyError> {
+    let pk_array = decode_b64_fixed::<ED25519_PK_LEN>(b64, "public key")?;
     VerifyingKey::from_bytes(&pk_array).map_err(|e| VerifyError::SignatureDataMalformed {
         reason: format!("invalid Ed25519 public key: {e}"),
     })
@@ -267,28 +269,7 @@ fn decode_public_key(b64: &str) -> Result<VerifyingKey, VerifyError> {
 
 /// Decode a base64 signature into a `Signature`.
 fn decode_signature(b64: &str) -> Result<Signature, VerifyError> {
-    let sig_bytes = base64::engine::general_purpose::STANDARD
-        .decode(b64)
-        .map_err(|e| VerifyError::SignatureDataMalformed {
-            reason: format!("invalid signature base64: {e}"),
-        })?;
-
-    if sig_bytes.len() != ED25519_SIG_LEN {
-        return Err(VerifyError::SignatureDataMalformed {
-            reason: format!(
-                "signature wrong length: expected {ED25519_SIG_LEN}, got {}",
-                sig_bytes.len()
-            ),
-        });
-    }
-
-    let sig_array: [u8; 64] =
-        sig_bytes
-            .try_into()
-            .map_err(|_| VerifyError::SignatureDataMalformed {
-                reason: "signature conversion failed".to_string(),
-            })?;
-
+    let sig_array = decode_b64_fixed::<ED25519_SIG_LEN>(b64, "signature")?;
     Ok(Signature::from_bytes(&sig_array))
 }
 

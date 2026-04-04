@@ -12,7 +12,6 @@
 //! | `Untrusted` | Key is not in any authority set |
 //! | `Revoked` | Key was in an authority set but has been revoked |
 //! | `WrongEpoch` | Key is in the authority set but outside its valid epoch |
-//! | `Expired` | Timestamp is outside the policy-allowed window |
 
 use std::collections::BTreeMap;
 
@@ -24,7 +23,7 @@ use crate::signature::KeyId;
 
 /// A trusted authority set: a collection of public keys with epoch
 /// bounds and optional revocation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuthoritySet {
     /// Human-readable identifier for this authority set.
     pub set_id: String,
@@ -35,7 +34,7 @@ pub struct AuthoritySet {
 }
 
 /// A single trusted authority key with epoch bounds.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuthorityKey {
     /// Base64-encoded Ed25519 public key.
     pub public_key_b64: String,
@@ -47,7 +46,7 @@ pub struct AuthorityKey {
 }
 
 /// A revocation record.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Revocation {
     /// Why the key was revoked.
     pub reason: String,
@@ -66,12 +65,12 @@ impl AuthoritySet {
         }
     }
 
-    /// Add a trusted key to the set.
+    /// Insert `key` under `key_id`, replacing any previous entry.
     pub fn add_key(&mut self, key_id: String, key: AuthorityKey) {
         self.keys.insert(key_id, key);
     }
 
-    /// Revoke a key.
+    /// Record a revocation for `key_id` (checked before epoch bounds).
     pub fn revoke(&mut self, key_id: String, revocation: Revocation) {
         self.revocations.insert(key_id, revocation);
     }
@@ -80,7 +79,7 @@ impl AuthoritySet {
 // ── Trust Policy ───────────────────────────────────────────────────
 
 /// Policy for trust validation decisions.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrustPolicy {
     /// Current epoch for key validity checking.
     pub current_epoch: u64,
@@ -128,7 +127,7 @@ impl std::fmt::Display for TrustStatus {
 }
 
 /// Trust validation result for a signed receipt.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrustValidation {
     /// Trust status of the signing key.
     pub status: TrustStatus,
@@ -158,72 +157,61 @@ pub fn evaluate_trust(
 ) -> TrustValidation {
     let kid = key_id.as_hex().to_string();
 
+    let result = |status, detail| TrustValidation {
+        status,
+        authority_set_id: authority_set.set_id.clone(),
+        key_id: kid.clone(),
+        evaluated_at_epoch: policy.current_epoch,
+        detail,
+    };
+
     // Check revocation first (revocation overrides everything)
     if policy.enforce_revocation {
         if let Some(revocation) = authority_set.revocations.get(&kid) {
-            return TrustValidation {
-                status: TrustStatus::Revoked,
-                authority_set_id: authority_set.set_id.clone(),
-                key_id: kid,
-                evaluated_at_epoch: policy.current_epoch,
-                detail: Some(format!(
+            return result(
+                TrustStatus::Revoked,
+                Some(format!(
                     "revoked at epoch {}: {}",
                     revocation.revoked_at_epoch, revocation.reason
                 )),
-            };
+            );
         }
     }
 
     // Check if key is in the authority set
     let Some(authority_key) = authority_set.keys.get(&kid) else {
-        return TrustValidation {
-            status: TrustStatus::Untrusted,
-            authority_set_id: authority_set.set_id.clone(),
-            key_id: kid,
-            evaluated_at_epoch: policy.current_epoch,
-            detail: Some("key not found in authority set".to_string()),
-        };
+        return result(
+            TrustStatus::Untrusted,
+            Some("key not found in authority set".to_string()),
+        );
     };
 
     // Check epoch bounds
     if policy.enforce_epoch {
         if policy.current_epoch < authority_key.valid_from_epoch {
-            return TrustValidation {
-                status: TrustStatus::WrongEpoch,
-                authority_set_id: authority_set.set_id.clone(),
-                key_id: kid,
-                evaluated_at_epoch: policy.current_epoch,
-                detail: Some(format!(
+            return result(
+                TrustStatus::WrongEpoch,
+                Some(format!(
                     "current epoch {} is before key's valid_from_epoch {}",
                     policy.current_epoch, authority_key.valid_from_epoch
                 )),
-            };
+            );
         }
 
         if let Some(until) = authority_key.valid_until_epoch {
             if policy.current_epoch >= until {
-                return TrustValidation {
-                    status: TrustStatus::WrongEpoch,
-                    authority_set_id: authority_set.set_id.clone(),
-                    key_id: kid,
-                    evaluated_at_epoch: policy.current_epoch,
-                    detail: Some(format!(
+                return result(
+                    TrustStatus::WrongEpoch,
+                    Some(format!(
                         "current epoch {} is at or past key's valid_until_epoch {until}",
                         policy.current_epoch
                     )),
-                };
+                );
             }
         }
     }
 
-    // All checks passed
-    TrustValidation {
-        status: TrustStatus::Trusted,
-        authority_set_id: authority_set.set_id.clone(),
-        key_id: kid,
-        evaluated_at_epoch: policy.current_epoch,
-        detail: None,
-    }
+    result(TrustStatus::Trusted, None)
 }
 
 #[cfg(test)]
