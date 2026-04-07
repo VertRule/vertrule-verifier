@@ -1,0 +1,20 @@
+schema_version: 1
+capability_id: receipt.public_verifier
+capability_version: v1
+domain: receipt
+name: Public Receipt Verifier
+aliases: []
+maturity: production
+surface: internal
+owner:
+  kind: crate
+  name: vertrule-verifier
+implementation:
+  primary_module: vertrule-verifier/src/lib.rs
+  entrypoints:
+    - type: module
+      symbol: vertrule-verifier
+evidence:
+  tests: []
+  receipts: []
+supersedes: []
