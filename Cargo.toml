@@ -3,7 +3,7 @@ name = "vertrule-verifier"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Public-facing verifier for VertRule receipt envelopes -- zero runtime deps"
+description = "Public-facing verifier for VertRule receipt envelopes -- zero private runtime-stack dependencies"
 repository = "https://github.com/VertRule/vertrule-verifier"
 keywords = ["verifier", "receipts", "cryptography", "governance", "canonicalization"]
 authors = ["Dave Ingle"]
@@ -20,7 +20,7 @@ exclude = [
 ]
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "vr-verify"

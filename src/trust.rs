@@ -146,6 +146,11 @@ pub struct TrustValidation {
 
 /// Evaluate trust for a key ID against an authority set and policy.
 ///
+/// When `claimed_public_key_b64` is provided, the evaluation also checks
+/// that the claimed public key matches the authority set entry. A mismatch
+/// produces [`TrustStatus::Untrusted`] — this prevents a valid `key_id` from
+/// being paired with a different public key.
+///
 /// This is a pure function: no I/O, no global state. The caller
 /// provides the authority set and policy; the function returns a
 /// deterministic trust decision.
@@ -154,6 +159,7 @@ pub fn evaluate_trust(
     key_id: &KeyId,
     authority_set: &AuthoritySet,
     policy: &TrustPolicy,
+    claimed_public_key_b64: Option<&str>,
 ) -> TrustValidation {
     let kid = key_id.as_hex().to_string();
 
@@ -185,6 +191,18 @@ pub fn evaluate_trust(
             Some("key not found in authority set".to_string()),
         );
     };
+
+    // Validate public key matches authority set entry
+    if let Some(claimed) = claimed_public_key_b64 {
+        if !authority_key.public_key_b64.is_empty() && claimed != authority_key.public_key_b64 {
+            return result(
+                TrustStatus::Untrusted,
+                Some(
+                    "claimed public_key_b64 does not match authority set entry".to_string(),
+                ),
+            );
+        }
+    }
 
     // Check epoch bounds
     if policy.enforce_epoch {

@@ -10,6 +10,9 @@ const FORBIDDEN_DEPS: &[&str] = &[
     "vertrule-app",
     "vertrule-adapters",
     "vertrule-cli",
+    "vertrule-runtime",
+    "vertrule-crypto",
+    "vertrule-governance",
 ];
 
 macro_rules! vr_test {

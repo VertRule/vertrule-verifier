@@ -252,6 +252,55 @@ vr_test!(
 );
 
 vr_test!(
+    /// Correct `key_id`/`public_key` pair but bad signature → `key_id_consistent`: true, valid: false.
+    fn test_correct_key_id_with_bad_signature() {
+        let receipt_bytes = build_single_bytes(1000, serde_json::json!({"key": "value"}))?;
+
+        // Generate a real keypair for a consistent key_id/public_key pair
+        let seed = [99u8; 32];
+        let sk = ed25519_dalek::SigningKey::from_bytes(&seed);
+        let pk = sk.verifying_key();
+        let pk_b64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            pk.as_bytes(),
+        );
+        let hash = blake3::hash(pk.as_bytes());
+        let key_id = hex::encode(&hash.as_bytes()[..12]);
+
+        // All-zeros signature: structurally valid length, cryptographically invalid
+        let sig_b64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            [0u8; 64],
+        );
+
+        let bundle = serde_json::json!({
+            "alg": "Ed25519",
+            "key_id": key_id,
+            "public_key_b64": pk_b64,
+            "signature_b64": sig_b64,
+            "schema_version": "0.2",
+            "digest_basis": "BLAKE3+JCS",
+            "timestamp": "2026-01-01T00:00:00Z"
+        });
+        let sig_bytes = serde_json::to_vec(&bundle)
+            .map_err(|e| anyhow::anyhow!("serialize: {e}"))?;
+
+        let result = super::verify_signed_receipt(&receipt_bytes, &sig_bytes);
+        let sig = result
+            .signature_validation
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("missing signature_validation"))?;
+
+        assert!(sig.present, "bundle was supplied, present must be true");
+        assert!(!sig.valid, "bad signature must not be valid");
+        assert!(
+            sig.key_id_consistent,
+            "key_id matches public_key — key_id_consistent must be true even when signature is invalid"
+        );
+    }
+);
+
+vr_test!(
     /// Valid JSON but wrong schema as signature bundle → present: true, valid: false.
     fn test_wrong_schema_sig_bundle_is_present_but_invalid() {
         let receipt_bytes = build_single_bytes(1000, serde_json::json!({"key": "value"}))?;

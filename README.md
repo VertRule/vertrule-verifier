@@ -53,6 +53,9 @@ schema profile validator (operating on raw JSON), then by
 `#[serde(deny_unknown_fields)]` on `ReceiptEnvelope` during typed
 deserialization. Both layers must agree.
 
+For this repository's own governance maturity status (authority set grade,
+receipt chain state, and what is verifiable today), see [`.vr/README.md`](.vr/README.md).
+
 ## Dependency Policy
 
 Production dependencies:
@@ -68,7 +71,8 @@ Production dependencies:
 | `base64` | Base64 encoding/decoding |
 | `thiserror` | Error derivation |
 
-The verifier must not depend on the private runtime execution stack.
+The verifier must not depend on the private runtime execution stack
+(`vertrule-runtime`, `vertrule-core`, `vertrule-crypto`, etc.).
 
 ## CLI
 
@@ -93,6 +97,7 @@ Output: JCS-canonical verification result to stdout, result digest to stderr.
 # Individual targets
 cargo build --release
 cargo test
+cargo test --features wasm
 cargo clippy --all-targets -- -D warnings
 cargo fmt -- --check
 
@@ -102,7 +107,7 @@ just check
 # Regenerate protocol test vectors
 just vectors
 
-# Full release verification sequence
+# Full release verification sequence (includes WASM feature tests)
 just verify-local
 ```
 
@@ -111,8 +116,8 @@ just verify-local
 This project uses a local governance model with no hosted CI. Before any
 release or merge:
 
-1. Run `just verify-local` -- this executes build, test, clippy, format
-   check, and vector regeneration in sequence
+1. Run `just verify-local` -- this executes build, test (default + WASM),
+   clippy, format check, and vector regeneration in sequence
 2. Confirm local CI passes with zero warnings (`just local-ci`)
 3. Verify test vectors are up to date (`just vectors` should produce no diff)
 4. Review that `governance-profile-v1.json` matches the code constants

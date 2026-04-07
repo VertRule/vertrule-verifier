@@ -8,6 +8,10 @@ build:
 test:
     cargo test
 
+# Run tests with WASM feature
+test-wasm:
+    cargo test --features wasm
+
 # Run clippy with deny warnings
 clippy:
     cargo clippy --all-targets -- -D warnings
@@ -44,5 +48,5 @@ local-ci:
     fi
 
 # Full release verification sequence
-verify-local: check vectors test
+verify-local: check vectors test test-wasm
     @echo "Local verification complete."

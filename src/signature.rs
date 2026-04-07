@@ -273,6 +273,19 @@ fn decode_signature(b64: &str) -> Result<Signature, VerifyError> {
     Ok(Signature::from_bytes(&sig_array))
 }
 
+/// Check whether the `key_id` in a signature bundle is consistent with
+/// the declared `public_key_b64`.
+///
+/// Returns `true` when `key_id == hex(BLAKE3(decode(public_key_b64))[..12])`.
+/// Returns `false` on decode failure or mismatch — never errors.
+#[must_use]
+pub fn check_key_id_consistency(bundle: &SignatureBundle) -> bool {
+    let Ok(key) = decode_public_key(&bundle.public_key_b64) else {
+        return false;
+    };
+    validate_key_id_matches(&key, &bundle.key_id).is_ok()
+}
+
 /// Validate that `key_id` matches the public key.
 ///
 /// `key_id` = `hex(BLAKE3(public_key_bytes)[..12])` = 24 hex chars.

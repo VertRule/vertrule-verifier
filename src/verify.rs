@@ -123,7 +123,12 @@ pub fn verify_signed_receipt_with_trust(
 
     // Trust evaluation requires a successfully parsed bundle.
     if let Some(bundle) = bundle {
-        let trust = crate::trust::evaluate_trust(&bundle.key_id, authority_set, trust_policy);
+        let trust = crate::trust::evaluate_trust(
+            &bundle.key_id,
+            authority_set,
+            trust_policy,
+            Some(&bundle.public_key_b64),
+        );
         if trust.status != crate::trust::TrustStatus::Trusted {
             result.add_error(format!("trust: {}", trust.status));
         }
@@ -230,12 +235,16 @@ fn verify_signature_bundle(
         }
     };
 
+    // Check key_id/public-key consistency independently of signature validity.
+    let key_id_consistent =
+        crate::signature::check_key_id_consistency(&bundle);
+
     match verify_signature(envelope, &bundle) {
         Ok(()) => {
             result.signature_validation = Some(SignatureValidation {
                 present: true,
                 valid: true,
-                key_id_consistent: true,
+                key_id_consistent,
             });
         }
         Err(e) => {
@@ -243,7 +252,7 @@ fn verify_signature_bundle(
             result.signature_validation = Some(SignatureValidation {
                 present: true,
                 valid: false,
-                key_id_consistent: false,
+                key_id_consistent,
             });
             return None;
         }
