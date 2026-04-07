@@ -86,8 +86,7 @@ impl BundleVerificationResult {
     ///
     /// Returns error if serialization or canonicalization fails.
     pub fn to_canon_bytes(&self) -> Result<Vec<u8>, VerifyError> {
-        let value =
-            serde_json::to_value(self).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(format!("{e}")))?;
         crate::canon::typed_canon_bytes(&value)
     }
 
@@ -97,8 +96,7 @@ impl BundleVerificationResult {
     ///
     /// Returns error if serialization or canonicalization fails.
     pub fn to_canon_string(&self) -> Result<String, VerifyError> {
-        let value =
-            serde_json::to_value(self).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+        let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(format!("{e}")))?;
         crate::canon::typed_canon_string(&value)
     }
 }
@@ -202,9 +200,7 @@ fn extract_payload_digests(envelope_json: &str) -> PayloadDigests {
     let payload = &value["payload"];
 
     PayloadDigests {
-        layer_trace_digest: payload["layer_trace_digest"]
-            .as_str()
-            .map(String::from),
+        layer_trace_digest: payload["layer_trace_digest"].as_str().map(String::from),
         selection_policy_digest: payload["selection_policy_digest"]
             .as_str()
             .map(String::from),
@@ -214,10 +210,9 @@ fn extract_payload_digests(envelope_json: &str) -> PayloadDigests {
 /// Compute `BLAKE3(JCS(value))` — the same computation as
 /// `vr-browser-runtime/src/canon.rs::digest_canonical`.
 fn digest_canonical_value(value: &serde_json::Value) -> Result<String, VerifyError> {
-    let json =
-        serde_json::to_string(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    let canonical = vr_jcs::to_canon_string_from_str(&json)
-        .map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let json = serde_json::to_string(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let canonical =
+        vr_jcs::to_canon_string_from_str(&json).map_err(|e| VerifyError::Canon(format!("{e}")))?;
     let hash = blake3::hash(canonical.as_bytes());
     Ok(hash.to_hex().to_string())
 }

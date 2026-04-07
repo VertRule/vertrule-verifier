@@ -197,9 +197,7 @@ pub fn evaluate_trust(
         if !authority_key.public_key_b64.is_empty() && claimed != authority_key.public_key_b64 {
             return result(
                 TrustStatus::Untrusted,
-                Some(
-                    "claimed public_key_b64 does not match authority set entry".to_string(),
-                ),
+                Some("claimed public_key_b64 does not match authority set entry".to_string()),
             );
         }
     }

@@ -274,10 +274,8 @@ fn public_key_mismatch_is_untrusted() -> Result<(), crate::error::VerifyError> {
     let seed = [42u8; 32];
     let sk = ed25519_dalek::SigningKey::from_bytes(&seed);
     let pk = sk.verifying_key();
-    let real_pk_b64 = base64::Engine::encode(
-        &base64::engine::general_purpose::STANDARD,
-        pk.as_bytes(),
-    );
+    let real_pk_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, pk.as_bytes());
 
     let mut set = AuthoritySet::new("pk-test".to_string());
     set.add_key(

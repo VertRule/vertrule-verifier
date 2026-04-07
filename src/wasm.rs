@@ -214,13 +214,22 @@ mod tests {
         // Build a valid envelope
         let payload = serde_json::json!({"key": "value"});
         let mut obj = serde_json::Map::new();
-        obj.insert("context_digest".to_string(), serde_json::json!("a".repeat(64)));
+        obj.insert(
+            "context_digest".to_string(),
+            serde_json::json!("a".repeat(64)),
+        );
         obj.insert("envelope_version".to_string(), serde_json::json!(1));
         obj.insert("logical_time".to_string(), serde_json::json!(1000));
         obj.insert("payload".to_string(), payload);
-        obj.insert("policy_digest".to_string(), serde_json::json!("c".repeat(64)));
+        obj.insert(
+            "policy_digest".to_string(),
+            serde_json::json!("c".repeat(64)),
+        );
         obj.insert("receipt_type".to_string(), serde_json::json!("governance"));
-        obj.insert("schema_digest".to_string(), serde_json::json!("b".repeat(64)));
+        obj.insert(
+            "schema_digest".to_string(),
+            serde_json::json!("b".repeat(64)),
+        );
 
         let Some(canon_bytes) =
             crate::canon::typed_canon_bytes(&serde_json::Value::Object(obj.clone())).ok()
@@ -228,7 +237,10 @@ mod tests {
             return;
         };
         let hash = blake3::hash(&canon_bytes);
-        obj.insert("event_hash".to_string(), serde_json::json!(hex::encode(hash.as_bytes())));
+        obj.insert(
+            "event_hash".to_string(),
+            serde_json::json!(hex::encode(hash.as_bytes())),
+        );
         let value = serde_json::Value::Object(obj);
         let Ok(receipt_json) = crate::canon::typed_canon_string(&value) else {
             return;
@@ -238,16 +250,12 @@ mod tests {
         let seed = [77u8; 32];
         let sk = ed25519_dalek::SigningKey::from_bytes(&seed);
         let pk = sk.verifying_key();
-        let pk_b64 = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            pk.as_bytes(),
-        );
+        let pk_b64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, pk.as_bytes());
         let pk_hash = blake3::hash(pk.as_bytes());
         let key_id = hex::encode(&pk_hash.as_bytes()[..12]);
-        let sig_b64 = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            &[0u8; 64],
-        );
+        let sig_b64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &[0u8; 64]);
         let bundle = serde_json::json!({
             "alg": "Ed25519",
             "key_id": key_id,
@@ -263,8 +271,14 @@ mod tests {
         };
 
         let output = verify_signed_receipt_json(&receipt_json, sig_str);
-        assert!(output.contains("\"key_id_consistent\":true"), "key_id matches public_key — got: {output}");
-        assert!(output.contains("\"valid\":false"), "bad signature — got: {output}");
+        assert!(
+            output.contains("\"key_id_consistent\":true"),
+            "key_id matches public_key — got: {output}"
+        );
+        assert!(
+            output.contains("\"valid\":false"),
+            "bad signature — got: {output}"
+        );
     }
 
     #[test]

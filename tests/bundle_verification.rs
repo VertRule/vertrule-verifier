@@ -42,8 +42,8 @@ vr_test!(
         }
 
         for path in &files {
-            let bytes = std::fs::read(path)
-                .map_err(|e| anyhow::anyhow!("read {}: {e}", path.display()))?;
+            let bytes =
+                std::fs::read(path).map_err(|e| anyhow::anyhow!("read {}: {e}", path.display()))?;
             let result = vertrule_verifier::verify_bundle(&bytes);
 
             anyhow::ensure!(
@@ -77,10 +77,9 @@ vr_test!(
             return Ok(());
         };
 
-        let raw = std::fs::read_to_string(first)
-            .map_err(|e| anyhow::anyhow!("read: {e}"))?;
-        let mut bundle: serde_json::Value = serde_json::from_str(&raw)
-            .map_err(|e| anyhow::anyhow!("parse: {e}"))?;
+        let raw = std::fs::read_to_string(first).map_err(|e| anyhow::anyhow!("read: {e}"))?;
+        let mut bundle: serde_json::Value =
+            serde_json::from_str(&raw).map_err(|e| anyhow::anyhow!("parse: {e}"))?;
 
         // Tamper with the layer_trace sidecar
         if let Some(trace) = bundle
@@ -90,8 +89,7 @@ vr_test!(
             trace["tampered_field"] = serde_json::json!("injected");
         }
 
-        let bytes = serde_json::to_vec(&bundle)
-            .map_err(|e| anyhow::anyhow!("serialize: {e}"))?;
+        let bytes = serde_json::to_vec(&bundle).map_err(|e| anyhow::anyhow!("serialize: {e}"))?;
         let result = vertrule_verifier::verify_bundle(&bytes);
 
         anyhow::ensure!(

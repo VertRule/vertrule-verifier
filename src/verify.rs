@@ -236,8 +236,7 @@ fn verify_signature_bundle(
     };
 
     // Check key_id/public-key consistency independently of signature validity.
-    let key_id_consistent =
-        crate::signature::check_key_id_consistency(&bundle);
+    let key_id_consistent = crate::signature::check_key_id_consistency(&bundle);
 
     match verify_signature(envelope, &bundle) {
         Ok(()) => {
