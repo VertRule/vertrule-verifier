@@ -21,6 +21,7 @@ Usage:
   vr-verify receipt <file.json>
   vr-verify chain   <chain.json>
   vr-verify signed  <file.json> <sig.json>
+  vr-verify bundle  <bundle.json>
 
 Exit codes:
   0  VALID
@@ -61,6 +62,14 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             }
             run_signed(&args[2], &args[3])
+        }
+        "bundle" => {
+            if args.len() != 3 {
+                eprintln!("Error: 'bundle' expects exactly one argument");
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+            run_bundle(&args[2])
         }
         _ => {
             eprintln!("Error: unknown command \"{command}\"");
@@ -115,6 +124,37 @@ fn run_signed(receipt_path: &str, sig_path: &str) -> ExitCode {
 
     let result = vertrule_verifier::verify_signed_receipt(&raw_bytes, &sig_bytes);
     emit_result(&result)
+}
+
+fn run_bundle(path: &str) -> ExitCode {
+    let raw_bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Error reading {path}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+
+    let result = vertrule_verifier::verify_bundle(&raw_bytes);
+
+    match result.to_canon_bytes() {
+        Ok(canon_bytes) => {
+            if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &canon_bytes) {
+                eprintln!("Error writing result: {e}");
+                return ExitCode::from(2);
+            }
+            let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\n");
+        }
+        Err(e) => {
+            eprintln!("Error canonicalizing result: {e}");
+            return ExitCode::from(2);
+        }
+    }
+
+    match result.status {
+        VerificationStatus::Valid => ExitCode::SUCCESS,
+        VerificationStatus::Invalid => ExitCode::from(1),
+    }
 }
 
 fn emit_result(result: &vertrule_verifier::result::VerificationResult) -> ExitCode {

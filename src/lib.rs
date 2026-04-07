@@ -24,6 +24,7 @@
 #![warn(missing_docs)]
 
 pub(crate) mod canon;
+pub mod bundle;
 pub mod chain;
 pub mod envelope;
 pub mod error;
@@ -39,6 +40,7 @@ pub mod verify;
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
+pub use bundle::{verify_bundle, BundleVerificationResult, SidecarDigestCheck};
 pub use chain::verify_chain;
 pub use envelope::{validate_receipt_envelope_integrity, ReceiptEnvelope};
 pub use error::VerifyError;

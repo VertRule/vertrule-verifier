@@ -96,6 +96,22 @@ pub fn verify_signed_receipt_json(receipt_json: &str, signature_json: &str) -> S
     result_to_json(&result)
 }
 
+/// Verify an execution bundle (envelope + sidecar digests).
+///
+/// Accepts the full bundle JSON string (`vr-execution-bundle/v1` format).
+/// Returns a `BundleVerificationResult` serialized as JCS-canonical JSON.
+///
+/// This function never throws. Malformed input produces an `INVALID` result.
+#[must_use]
+#[wasm_bindgen]
+pub fn verify_bundle_json(bundle_json: &str) -> String {
+    let result = crate::verify_bundle(bundle_json.as_bytes());
+    match result.to_canon_string() {
+        Ok(s) => s,
+        Err(e) => error_json(&format!("canonicalization error: {e}")),
+    }
+}
+
 /// Compute the BLAKE3 digest of arbitrary bytes, returned as a 64-char hex string.
 ///
 /// Useful for the website to compute digests client-side for display
