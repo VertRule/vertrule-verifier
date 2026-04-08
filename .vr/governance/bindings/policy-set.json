@@ -1,29 +1,29 @@
 {
   "schema": "vr.governance.binding.policy-set/v1",
+  "digest_of": "Each digest is a BLAKE3 hash of the policy definition file (policy.toml) in the VertRule shared governance infrastructure. Policy source material is not bundled in this repository. The digest is the verifiable anchor; the overlay (if any) is bundled locally.",
   "bindings": [
     {
       "policy_id": "determinism@0.1",
-      "source": "governance/policies/determinism@0.1",
+      "digest": "72f890a1caa73c5e87c3a558d0c50bfe43b8a47052bb423697c86c4c27a54487",
       "mode": "bind+overlay",
       "overlay": "overlays/determinism@0.1.toml",
       "notes": "Scope overlay restricts to src/**/*.rs; no allowlist exceptions"
     },
     {
       "policy_id": "repo-boundary@0.1",
-      "source": "governance/policies/repo-boundary@0.1",
+      "digest": "311a7ecdc39526ac13d1a1a900a6edf809e5c3c2879baa3028070d636303c565",
       "mode": "bind",
       "notes": "Tier boundary enforcement — no overlay needed"
     },
     {
       "policy_id": "receipt-canonicalization@0.1",
-      "source": "governance/policies/receipt-canonicalization@0.1",
+      "digest": "0a80d91ac74dc63185a92402ea82bd05f30247d88de8b53a1994f7f98562c10c",
       "mode": "bind",
       "notes": "JCS + BLAKE3 canonicalization requirements"
-    }
-    ,
+    },
     {
       "policy_id": "numeric-safety@0.1",
-      "source": "governance/policies/numeric-safety@0.1",
+      "digest": "93ef76d701d28abaeb8ab7459ac867e1bb412c7bc52169a706c5da25d9a42eb3",
       "mode": "bind+overlay",
       "overlay": "overlays/numeric-safety@0.1.toml",
       "notes": "Float glovebox — no bare float arithmetic; f32::from_bits for finiteness checks is exempt"

@@ -1,12 +1,13 @@
 {
   "schema": "vr.governance.receipt-chain.manifest/v1",
   "repo_id": "vertrule-verifier",
-  "chain_status": "empty",
+  "chain_status": "genesis",
   "receipt_count": 0,
   "schema_classes": [],
   "chain_root": null,
   "latest_receipt_id": null,
   "parent_linkage_complete": false,
   "sequence_ref_present": false,
-  "subject_consistent": true
+  "subject_consistent": true,
+  "note": "No governance receipts have been produced for this repository. This chain is in genesis state."
 }

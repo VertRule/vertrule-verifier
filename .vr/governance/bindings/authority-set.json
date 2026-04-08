@@ -1,6 +1,9 @@
 {
   "schema": "vr.governance.binding.authority-set/v1",
   "authority_set_id": "repo-default",
-  "source": "governance/authority-sets/default.yaml",
-  "epoch": 2
+  "digest": "754209abed2302ba6f7822f4c51d1d3ef112e4b6a2ef34569adf46fe653c231b",
+  "digest_of": "BLAKE3 hash of the canonical authority-set definition (YAML). The source material is managed in the VertRule shared governance infrastructure and is not bundled in this repository.",
+  "epoch": 2,
+  "grade": "development",
+  "note": "Development authority set. Keys are derived from plaintext hashing, not managed custody. This digest anchors the binding but is not independently verifiable from this repository alone."
 }
