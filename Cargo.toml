@@ -1,6 +1,6 @@
 [package]
 name = "vertrule-verifier"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Public-facing verifier for VertRule receipt envelopes -- zero private runtime-stack dependencies"
@@ -37,9 +37,9 @@ ed25519-dalek = "2"
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "1"
-vertrule-schemas = "0.2.2"
-vr-jcs = "0.3.0"
+thiserror = "2"
+vertrule-schemas = "0.2.3"
+vr-jcs = "0.3.2"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]

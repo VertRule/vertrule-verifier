@@ -3,13 +3,13 @@
 
 [crate]
 name = "vertrule-verifier"
-version = "0.1.0"
+version = "0.2.0"
 publish = true
 extraction_ready = true
 
 [dependencies.constitutional]
-vertrule-schemas = "0.2.2"
-vr-jcs = "0.3.0"
+vertrule-schemas = "0.2.3"
+vr-jcs = "0.3.2"
 
 [stage]
 current = 0
