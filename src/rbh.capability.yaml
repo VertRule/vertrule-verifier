@@ -1,0 +1,43 @@
+schema_version: 1
+capability_id: receipt.rbh
+capability_version: v1
+domain: receipt
+name: "RBH receipt verifier"
+aliases:
+  - rbh-verify
+  - receipt-rbh-verify
+maturity: experimental
+surface: public
+owner:
+  kind: crate
+  name: vertrule-verifier
+implementation:
+  primary_module: vertrule-verifier/src/rbh.rs
+  owner_files:
+    - vertrule-verifier/src/rbh_tests.rs
+  entrypoints:
+    - type: function
+      symbol: verify_external_receipt
+    - type: struct
+      symbol: VerifiedReceiptMetadata
+    - type: enum
+      symbol: ReceiptVerifyError
+invariants:
+  - id: rbh_verify_byte_law
+    description: >
+      verify_external_receipt parses receipt bytes, verifies envelope_version
+      against SchemaVersion::V1, and verifies BLAKE3(JCS(payload)) ==
+      envelope.event_hash. Pure deterministic verification with no network,
+      no wall-clock, no key discovery.
+  - id: rbh_verify_metadata_immutable
+    description: >
+      VerifiedReceiptMetadata fields are private; only verify_external_receipt
+      can construct it; accessors are read-only. Receipt metadata is never
+      synthesized outside the structural verification pipeline.
+notes: >
+  Lifted from vertrule-app::policy_substrate::rbh_verify (CG-SP
+  RBH-VERIFY-LIFT-V1, 2026-04-30) so the post-mint public trust surface
+  lives with the verifier. Pre-mint authorization
+  (validate_authorization_request) remains in vertrule-app's policy
+  substrate (different trust posture).
+supersedes: []

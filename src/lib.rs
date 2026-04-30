@@ -31,6 +31,7 @@ pub mod error;
 pub mod ingestion;
 pub mod limits;
 pub mod mri_profile;
+pub mod rbh;
 pub mod result;
 pub mod schema_profile;
 pub mod signature;
@@ -46,6 +47,7 @@ pub use envelope::{validate_receipt_envelope_integrity, ReceiptEnvelope};
 pub use error::VerifyError;
 pub use limits::{LimitViolation, VerifierLimits};
 pub use mri_profile::{validate_gradient_coupling_payload, validate_mri_batch_payload};
+pub use rbh::{verify_external_receipt, ReceiptVerifyError, VerifiedReceiptMetadata};
 pub use trust::{
     AuthorityKey, AuthoritySet, Revocation, TrustPolicy, TrustStatus, TrustValidation,
 };
