@@ -1,6 +1,6 @@
 [package]
 name = "vertrule-verifier"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Public-facing verifier for VertRule receipt envelopes -- zero private runtime-stack dependencies"
@@ -9,6 +9,7 @@ keywords = ["verifier", "receipts", "cryptography", "governance", "canonicalizat
 authors = ["Dave Ingle"]
 categories = ["cryptography", "command-line-utilities"]
 exclude = [
+    ".claude/**",
     ".vr/**",
     ".github/**",
     "tooling/**",
@@ -18,6 +19,8 @@ exclude = [
     "PUBLIC_SURFACE.md",
     "RELEASE.md",
     "justfile",
+    "*.capability.yaml",
+    "**/*.capability.yaml",
 ]
 
 [lib]
@@ -39,8 +42,14 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-vertrule-schemas = "0.2.3"
-vr-jcs = "0.3.2"
+# Path dependency — kept in lockstep with the workspace-local
+# `vertrule-schemas` version to prevent schema/verifier drift. The
+# previous `= "0.2.3"` registry pin let cargo resolve to a different
+# `ReceiptEnvelope` instance than `vr-dmca-pack` (and other adapters)
+# depended on, producing E0308 type-mismatch errors at every boundary
+# crossing between the two crates.
+vertrule-schemas = { version = "0.4", path = "../vertrule-schemas" }
+vr-jcs = "0.4"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]

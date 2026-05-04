@@ -468,21 +468,19 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vertrule-schemas"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "566135994cdca59d9b70942e3369ae409e09e0b20484de641889b292fba319f5"
+version = "0.4.0"
 dependencies = [
  "blake3",
  "hex",
  "serde",
  "serde_json",
  "thiserror",
- "vr-jcs",
+ "vr-jcs 0.4.0",
 ]
 
 [[package]]
 name = "vertrule-verifier"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -493,16 +491,27 @@ dependencies = [
  "serde_json",
  "thiserror",
  "vertrule-schemas",
- "vr-jcs",
+ "vr-jcs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen",
 ]
 
 [[package]]
 name = "vr-jcs"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74c8dfbd0d1f2b2bc72bec51493fa02ca475ed087a30d8a4721c9452c71c9c36"
+version = "0.4.0"
 dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
+ "zmij",
+]
+
+[[package]]
+name = "vr-jcs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e1080ffc92ce53b59bc63821104e82f9812f110ee8c119531f1a94d64f63fdb"
+dependencies = [
+ "blake3",
  "serde",
  "serde_json",
  "zmij",
