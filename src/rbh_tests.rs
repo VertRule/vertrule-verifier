@@ -18,7 +18,7 @@ fn envelope_bytes(
     envelope_version: u64,
     logical_time: u64,
     boundary_origin: Option<&str>,
-    payload: serde_json::Value,
+    payload: &serde_json::Value,
 ) -> Result<Vec<u8>, anyhow::Error> {
     let mut envelope_json = json!({
         "envelope_version": envelope_version,
@@ -51,7 +51,7 @@ fn make_valid_receipt_bytes() -> Result<Vec<u8>, anyhow::Error> {
     let payload_bytes = vr_jcs::to_canon_bytes_from_slice(&json_bytes)?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&payload_bytes).as_bytes());
 
-    envelope_bytes(event_hash, 1, 42, Some("governance"), payload)
+    envelope_bytes(event_hash, 1, 42, Some("governance"), &payload)
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn tampered_event_hash_rejected() -> Result<(), anyhow::Error> {
     let payload = json!({"key": "value"});
     let wrong_hash = DigestBytes::from_array([0xFF; 32]);
 
-    let bytes = envelope_bytes(wrong_hash, 1, 1, None, payload)?;
+    let bytes = envelope_bytes(wrong_hash, 1, 1, None, &payload)?;
     let result = verify_external_receipt(&bytes);
     assert!(matches!(
         result,
@@ -86,7 +86,7 @@ fn unsupported_version_rejected() -> Result<(), anyhow::Error> {
     let payload_bytes = vr_jcs::to_canon_bytes_from_slice(&json_bytes)?;
     let event_hash = DigestBytes::from_array(*blake3::hash(&payload_bytes).as_bytes());
 
-    let bytes = envelope_bytes(event_hash, 99, 1, None, payload)?;
+    let bytes = envelope_bytes(event_hash, 99, 1, None, &payload)?;
     let result = verify_external_receipt(&bytes);
     // `SchemaVersion::deserialize` rejects version 99 at parse time, so
     // the error surfaces as `ParseError` rather than reaching
@@ -95,7 +95,7 @@ fn unsupported_version_rejected() -> Result<(), anyhow::Error> {
     assert!(
         matches!(
             result,
-            Err(ReceiptVerifyError::UnsupportedVersion(_)) | Err(ReceiptVerifyError::ParseError(_))
+            Err(ReceiptVerifyError::UnsupportedVersion(_) | ReceiptVerifyError::ParseError(_))
         ),
         "expected UnsupportedVersion or ParseError, got {result:?}"
     );
