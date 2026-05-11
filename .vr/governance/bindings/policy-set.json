@@ -27,6 +27,12 @@
       "mode": "bind+overlay",
       "overlay": "overlays/numeric-safety@0.1.toml",
       "notes": "Float glovebox — no bare float arithmetic; f32::from_bits for finiteness checks is exempt"
+    },
+    {
+      "policy_id": "capability-discovery@0.1",
+      "digest": "d98876dcaa3d3ef8979ee0a31f652634dbf90c409707d1e07512e79b17e500c9",
+      "mode": "bind",
+      "notes": "Lane B+C capability admission — declaration required for all edits under governed paths"
     }
   ],
   "repo_local_policies": []

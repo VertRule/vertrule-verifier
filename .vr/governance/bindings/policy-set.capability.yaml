@@ -1,0 +1,13 @@
+schema_version: 1
+capability_id: governance.policy-set
+capability_version: v1
+domain: governance
+name: "Verifier Policy Set Binding"
+maturity: experimental
+surface: internal
+implementation:
+  primary_module: vertrule-verifier/.vr/governance/bindings/policy-set.json
+  entrypoints:
+    - type: module
+      symbol: policy-set
+supersedes: []

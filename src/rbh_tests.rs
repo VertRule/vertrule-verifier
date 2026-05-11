@@ -95,8 +95,7 @@ fn unsupported_version_rejected() -> Result<(), anyhow::Error> {
     assert!(
         matches!(
             result,
-            Err(ReceiptVerifyError::UnsupportedVersion(_))
-                | Err(ReceiptVerifyError::ParseError(_))
+            Err(ReceiptVerifyError::UnsupportedVersion(_)) | Err(ReceiptVerifyError::ParseError(_))
         ),
         "expected UnsupportedVersion or ParseError, got {result:?}"
     );

@@ -475,7 +475,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "vr-jcs 0.4.0",
+ "vr-jcs",
 ]
 
 [[package]]
@@ -491,25 +491,13 @@ dependencies = [
  "serde_json",
  "thiserror",
  "vertrule-schemas",
- "vr-jcs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vr-jcs",
  "wasm-bindgen",
 ]
 
 [[package]]
 name = "vr-jcs"
 version = "0.4.0"
-dependencies = [
- "blake3",
- "serde",
- "serde_json",
- "zmij",
-]
-
-[[package]]
-name = "vr-jcs"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e1080ffc92ce53b59bc63821104e82f9812f110ee8c119531f1a94d64f63fdb"
 dependencies = [
  "blake3",
  "serde",

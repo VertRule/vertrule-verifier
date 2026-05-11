@@ -1,0 +1,22 @@
+schema_version: 1
+capability_id: receipt.public_verifier.cli
+capability_version: v1
+domain: receipt
+name: "Public Receipt Verifier CLI"
+aliases: []
+maturity: production
+surface: public
+owner:
+  kind: crate
+  name: vertrule-verifier
+implementation:
+  primary_module: vertrule-verifier/src/bin/vr_verify.rs
+  entrypoints:
+    - type: binary
+      symbol: vr-verify
+owner_files:
+  - vertrule-verifier/src/bin/vr_verify.rs
+evidence:
+  tests: []
+  receipts: []
+supersedes: []

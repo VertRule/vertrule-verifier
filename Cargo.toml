@@ -49,7 +49,7 @@ thiserror = "2"
 # depended on, producing E0308 type-mismatch errors at every boundary
 # crossing between the two crates.
 vertrule-schemas = { version = "0.4", path = "../vertrule-schemas" }
-vr-jcs = "0.4"
+vr-jcs = { version = "0.4", path = "../vr-jcs" }
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
