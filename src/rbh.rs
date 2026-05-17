@@ -118,13 +118,35 @@ fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVeri
 }
 
 /// Verify the payload digest declared in the receipt envelope.
+///
+/// As of Gate 2 (JCS Consumer Hardening Plan), delegates to the sealed
+/// [`crate::identity::PayloadEventDigest::recompute_from_payload_value`]
+/// constructor. Byte-stable with the prior inline
+/// `BLAKE3(to_canon_bytes_from_slice(to_vec(payload)))` implementation.
+///
+/// Note: the verifier's payload-only digest does NOT match
+/// `vertrule-schemas::ReceiptDigest::from_envelope_commitment`, which
+/// computes `BLAKE3(JCS(envelope \ {event_hash}))`. Reconciling that
+/// schemas-vs-verifier contract discrepancy is tracked separately
+/// from Gate 2.
 fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyError> {
-    let json_bytes = serde_json::to_vec(&envelope.payload)
+    let payload_value = serde_json::to_value(&envelope.payload)
         .map_err(|e| ReceiptVerifyError::ParseError(e.to_string()))?;
-    let canon_bytes = vr_jcs::to_canon_bytes_from_slice(&json_bytes)
-        .map_err(|e| ReceiptVerifyError::ParseError(e.to_string()))?;
-    let computed = blake3::hash(&canon_bytes);
-    let actual = DigestBytes::from_array(*computed.as_bytes());
+    let digest = crate::identity::PayloadEventDigest::recompute_from_payload_value(
+        &payload_value,
+    )
+    .map_err(|e| ReceiptVerifyError::ParseError(format!("{e}")))?;
+
+    let bytes = digest.bytes();
+    let mut buf = [0u8; 32];
+    if bytes.len() != buf.len() {
+        return Err(ReceiptVerifyError::ParseError(format!(
+            "payload digest had unexpected length {}",
+            bytes.len()
+        )));
+    }
+    buf.copy_from_slice(bytes);
+    let actual = DigestBytes::from_array(buf);
 
     if actual == envelope.event_hash {
         Ok(())
