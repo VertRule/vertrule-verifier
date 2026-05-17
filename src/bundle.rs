@@ -207,14 +207,14 @@ fn extract_payload_digests(envelope_json: &str) -> PayloadDigests {
     }
 }
 
-/// Compute `BLAKE3(JCS(value))` — the same computation as
-/// `vr-browser-runtime/src/canon.rs::digest_canonical`.
+/// Compute `BLAKE3(JCS(value))` for a bundle sidecar value.
+///
+/// As of Gate 2 (JCS Consumer Hardening Plan), delegates to the
+/// sealed [`crate::identity::SidecarDigest::recompute_from_value`]
+/// constructor. Byte-stable with the prior in-line
+/// `BLAKE3(to_canon_string(value))` implementation.
 fn digest_canonical_value(value: &serde_json::Value) -> Result<String, VerifyError> {
-    let json = serde_json::to_string(value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    let canonical =
-        vr_jcs::to_canon_string_from_str(&json).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    let hash = blake3::hash(canonical.as_bytes());
-    Ok(hash.to_hex().to_string())
+    Ok(crate::identity::SidecarDigest::recompute_from_value(value)?.to_hex_string())
 }
 
 /// Check a single sidecar against its expected digest.
