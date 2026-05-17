@@ -119,8 +119,11 @@ pub fn verify_bundle_json(bundle_json: &str) -> String {
 #[must_use]
 #[wasm_bindgen]
 pub fn digest_hex(input: &[u8]) -> String {
-    let hash = blake3::hash(input);
-    hex::encode(hash.as_bytes())
+    // As of Gate 2 (JCS Consumer Hardening Plan), routes through the
+    // sealed `GenericByteDigest`. The input is treated as opaque binary
+    // bytes — not canonical JSON. The WASM-facing return shape (lowercase
+    // hex) is preserved.
+    crate::identity::GenericByteDigest::from_bytes(input).to_hex_string()
 }
 
 /// Return the verifier's schema profile version.
@@ -161,13 +164,15 @@ mod tests {
         );
 
         // event_hash = BLAKE3(JCS(envelope \ {event_hash}))
-        let Some(canon_bytes) =
-            crate::canon::typed_canon_bytes(&serde_json::Value::Object(obj.clone())).ok()
+        // Migrated to PayloadEventDigest (Gate 2): byte-stable with
+        // the legacy `BLAKE3(canon_bytes)` path.
+        let envelope_value = serde_json::Value::Object(obj.clone());
+        let Ok(digest) =
+            crate::identity::PayloadEventDigest::recompute_from_payload_value(&envelope_value)
         else {
             return;
         };
-        let hash = blake3::hash(&canon_bytes);
-        let event_hash = hex::encode(hash.as_bytes());
+        let event_hash = hex::encode(digest.bytes());
 
         obj.insert("event_hash".to_string(), serde_json::json!(&event_hash));
 
@@ -231,15 +236,16 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        let Some(canon_bytes) =
-            crate::canon::typed_canon_bytes(&serde_json::Value::Object(obj.clone())).ok()
+        // event_hash via sealed PayloadEventDigest (Gate 2; byte-stable).
+        let envelope_value = serde_json::Value::Object(obj.clone());
+        let Ok(digest) =
+            crate::identity::PayloadEventDigest::recompute_from_payload_value(&envelope_value)
         else {
             return;
         };
-        let hash = blake3::hash(&canon_bytes);
         obj.insert(
             "event_hash".to_string(),
-            serde_json::json!(hex::encode(hash.as_bytes())),
+            serde_json::json!(hex::encode(digest.bytes())),
         );
         let value = serde_json::Value::Object(obj);
         let Ok(receipt_json) = crate::canon::typed_canon_string(&value) else {
@@ -252,8 +258,9 @@ mod tests {
         let pk = sk.verifying_key();
         let pk_b64 =
             base64::Engine::encode(&base64::engine::general_purpose::STANDARD, pk.as_bytes());
-        let pk_hash = blake3::hash(pk.as_bytes());
-        let key_id = hex::encode(&pk_hash.as_bytes()[..12]);
+        // Key fingerprint via sealed GenericByteDigest (binary identity).
+        let pk_hash = crate::identity::GenericByteDigest::from_bytes(pk.as_bytes());
+        let key_id = hex::encode(&pk_hash.bytes()[..12]);
         let sig_b64 =
             base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &[0u8; 64]);
         let bundle = serde_json::json!({
@@ -337,14 +344,14 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash = BLAKE3(JCS(envelope \ {event_hash}))
-        let Some(canon_bytes) =
-            crate::canon::typed_canon_bytes(&serde_json::Value::Object(obj.clone())).ok()
+        // event_hash via sealed PayloadEventDigest (Gate 2; byte-stable).
+        let envelope_value = serde_json::Value::Object(obj.clone());
+        let Ok(digest) =
+            crate::identity::PayloadEventDigest::recompute_from_payload_value(&envelope_value)
         else {
             return;
         };
-        let hash = blake3::hash(&canon_bytes);
-        let event_hash = hex::encode(hash.as_bytes());
+        let event_hash = hex::encode(digest.bytes());
 
         obj.insert("event_hash".to_string(), serde_json::json!(&event_hash));
 

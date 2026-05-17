@@ -148,6 +148,50 @@ impl PayloadEventDigest {
     }
 }
 
+// ── GenericByteDigest ────────────────────────────────────────────
+// Binary identity: BLAKE3 over arbitrary input bytes, NOT JCS.
+
+/// Sealed binary-identity digest: `BLAKE3(input_bytes)`.
+///
+/// Used for inputs that are **not** canonical JSON — e.g. a public key
+/// fingerprint, an arbitrary byte blob exposed to a WASM/JS caller. The
+/// input bytes are the canonical representation; there is no JSON shape
+/// to canonicalize.
+///
+/// Per the JCS Consumer Hardening Plan's three-class identity model,
+/// binary-payload identity is a legitimate non-JCS digest contract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GenericByteDigest {
+    bytes: [u8; 32],
+}
+
+impl GenericByteDigest {
+    /// Compute `BLAKE3(input)` for arbitrary input bytes.
+    ///
+    /// # ALLOW-JCS-BYPASS
+    ///
+    /// Binary payload identity, not canonical JSON identity.
+    #[must_use]
+    pub fn from_bytes(input: &[u8]) -> Self {
+        // ALLOW-JCS-BYPASS: binary payload digest, not canonical JSON identity
+        Self {
+            bytes: *blake3::hash(input).as_bytes(),
+        }
+    }
+
+    /// Borrow the raw digest bytes.
+    #[must_use]
+    pub const fn bytes(&self) -> &[u8; 32] {
+        &self.bytes
+    }
+
+    /// Lowercase-hex string form.
+    #[must_use]
+    pub fn to_hex_string(&self) -> String {
+        hex::encode(self.bytes)
+    }
+}
+
 #[cfg(test)]
 #[path = "identity_tests.rs"]
 mod identity_tests;
