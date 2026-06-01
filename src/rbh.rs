@@ -132,10 +132,8 @@ fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVeri
 fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyError> {
     let payload_value = serde_json::to_value(&envelope.payload)
         .map_err(|e| ReceiptVerifyError::ParseError(e.to_string()))?;
-    let digest = crate::identity::PayloadEventDigest::recompute_from_payload_value(
-        &payload_value,
-    )
-    .map_err(|e| ReceiptVerifyError::ParseError(format!("{e}")))?;
+    let digest = crate::identity::PayloadEventDigest::recompute_from_payload_value(&payload_value)
+        .map_err(|e| ReceiptVerifyError::ParseError(format!("{e}")))?;
 
     let bytes = digest.bytes();
     let mut buf = [0u8; 32];

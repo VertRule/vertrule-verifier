@@ -14,7 +14,8 @@ fn sidecar_digest_byte_stable_with_legacy_path() -> Result<(), VerifyError> {
     // Legacy-equivalent path: what `bundle.rs::digest_canonical_value`
     // computed pre-Gate-2.
     // ALLOW-JCS-SPEC: byte-stability assertion against legacy bypass
-    let legacy_json = serde_json::to_string(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
+    let legacy_json =
+        serde_json::to_string(&value).map_err(|e| VerifyError::Canon(format!("{e}")))?;
     let legacy_canonical = vr_jcs::to_canon_string_from_str(&legacy_json)
         .map_err(|e| VerifyError::Canon(format!("{e}")))?;
     let legacy_hash = blake3::hash(legacy_canonical.as_bytes());
@@ -49,7 +50,9 @@ fn sidecar_digest_to_hex_is_lowercase_64_chars() -> Result<(), VerifyError> {
     let sealed = SidecarDigest::recompute_from_value(&value)?;
     let hex = sealed.to_hex_string();
     assert_eq!(hex.len(), 64);
-    assert!(hex.chars().all(|c: char| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    assert!(hex
+        .chars()
+        .all(|c: char| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
     Ok(())
 }
 

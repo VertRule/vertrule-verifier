@@ -50,9 +50,7 @@ impl SidecarDigest {
     ///
     /// Returns [`VerifyError::Canon`] if canonicalization or digest
     /// computation fails.
-    pub fn recompute_from_value(
-        value: &serde_json::Value,
-    ) -> Result<Self, VerifyError> {
+    pub fn recompute_from_value(value: &serde_json::Value) -> Result<Self, VerifyError> {
         let inner = digest_trusted_value(value, &DigestStrategy::blake3_untagged())?;
         Ok(Self { inner })
     }
@@ -122,9 +120,7 @@ impl PayloadEventDigest {
     /// # Errors
     ///
     /// Returns [`VerifyError::Canon`] if canonicalization fails.
-    pub fn recompute_from_payload_value(
-        payload: &serde_json::Value,
-    ) -> Result<Self, VerifyError> {
+    pub fn recompute_from_payload_value(payload: &serde_json::Value) -> Result<Self, VerifyError> {
         let inner = digest_trusted_value(payload, &DigestStrategy::blake3_untagged())?;
         Ok(Self { inner })
     }

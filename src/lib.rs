@@ -26,10 +26,10 @@
 pub mod bundle;
 pub(crate) mod canon;
 pub(crate) mod canonical_identity;
-pub mod identity;
 pub mod chain;
 pub mod envelope;
 pub mod error;
+pub mod identity;
 pub mod ingestion;
 pub mod limits;
 pub mod mri_profile;
