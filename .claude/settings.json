@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/davidingle/Home/active/VertRule/repositories/governance/tools/claude-perms-gate.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/Users/davidingle/Home/active/VertRule/repositories/governance/tools/capability-discovery/hook-gate.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
