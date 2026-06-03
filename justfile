@@ -50,3 +50,6 @@ local-ci:
 # Full release verification sequence
 verify-local: check vectors test test-wasm
     @echo "Local verification complete."
+
+# Tier-3 contract name matched by the governance pre-push resolver.
+verify: verify-local
