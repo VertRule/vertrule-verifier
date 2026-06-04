@@ -125,8 +125,14 @@ fn constitutional_profile_verifies_envelope_minus() -> Result<(), anyhow::Error>
     // `event` (multi-law) WITH an explicit constitutional profile verifies via
     // envelope-minus recomputation.
     let payload = json!({"k": "v"});
-    let skeleton =
-        envelope_skeleton(1, "event", 5, None, Some("constitutional_envelope_v1"), &payload)?;
+    let skeleton = envelope_skeleton(
+        1,
+        "event",
+        5,
+        None,
+        Some("constitutional_envelope_v1"),
+        &payload,
+    )?;
     let event_hash = constitutional_event_hash(&skeleton)?;
     let bytes = receipt_bytes(&skeleton, &event_hash)?;
 
@@ -191,7 +197,10 @@ fn absent_profile_on_multi_law_event_rejects() -> Result<(), anyhow::Error> {
 
     let result = verify_external_receipt(&bytes);
     assert!(
-        matches!(result, Err(ReceiptVerifyError::EventHashLawAmbiguous { .. })),
+        matches!(
+            result,
+            Err(ReceiptVerifyError::EventHashLawAmbiguous { .. })
+        ),
         "multi-law `event` without a profile must reject, got {result:?}"
     );
     Ok(())
@@ -202,8 +211,7 @@ fn unknown_profile_rejects_at_parse() -> Result<(), anyhow::Error> {
     // `event_hash_profile` is a closed enum: an inadmissible profile id fails to
     // deserialize (fail-closed at the type layer) and never reaches dispatch.
     let payload = json!({"k": "v"});
-    let skeleton =
-        envelope_skeleton(1, "event", 3, None, Some("sek_receipt_digest_v1"), &payload)?;
+    let skeleton = envelope_skeleton(1, "event", 3, None, Some("sek_receipt_digest_v1"), &payload)?;
     let bytes = receipt_bytes(&skeleton, &DigestBytes::from_array([0x11; 32]))?;
 
     let result = verify_external_receipt(&bytes);

@@ -153,7 +153,7 @@ enum EventHashLaw {
 }
 
 /// `event` is the only multi-law `receipt_type` today (ADR-029): its
-/// `event_hash` may be either constitutional self-commitment or a RuntimePort
+/// `event_hash` may be either constitutional self-commitment or a `RuntimePort`
 /// typed preimage, so it requires an explicit discriminator.
 const fn is_multi_law(receipt_type: ReceiptType) -> bool {
     matches!(receipt_type, ReceiptType::Event)
