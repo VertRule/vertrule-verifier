@@ -28,7 +28,8 @@
       { "name": "parent_id", "type": "digest_hex", "description": "Previous envelope event_hash" },
       { "name": "boundary_origin", "type": "string", "description": "Provenance tag from known set (lowercase only)" },
       { "name": "digest_algorithm", "type": "string", "description": "Declared commitment primitive (default: BLAKE3)" },
-      { "name": "canonicalization", "type": "string", "description": "Declared canonicalization scheme (default: JCS)" }
+      { "name": "canonicalization", "type": "string", "description": "Declared canonicalization scheme (default: JCS)" },
+      { "name": "event_hash_profile", "type": "string", "description": "Digest-law profile id selecting the event_hash law (ADR-029); required on multi-law receipt_type 'event'" }
     ]
   },
   "known_receipt_types": ["event", "llm", "mri", "governance", "adapter", "projection", "training"],

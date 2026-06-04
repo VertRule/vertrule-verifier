@@ -13,7 +13,8 @@
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use vertrule_schemas::{DigestBytes, ReceiptEnvelope, SchemaVersion};
+use vertrule_schemas::receipts::compute_event_hash;
+use vertrule_schemas::{EventHashProfileId, ReceiptEnvelope, ReceiptType, SchemaVersion};
 
 /// Metadata extracted from a structurally verified external receipt.
 ///
@@ -96,7 +97,7 @@ pub enum ReceiptVerifyError {
     #[error("unsupported envelope version: {0}")]
     UnsupportedVersion(u32),
 
-    /// Event hash does not match canonical payload.
+    /// Event hash does not match the recomputed digest for its profile.
     #[error("event hash mismatch: expected {expected}, actual {actual}")]
     EventHashMismatch {
         /// Declared event hash.
@@ -104,6 +105,29 @@ pub enum ReceiptVerifyError {
         /// Recomputed event hash.
         actual: String,
     },
+
+    /// A multi-law `receipt_type` carries no `event_hash_profile`
+    /// discriminator; the digest law cannot be resolved and is never inferred.
+    #[error(
+        "event_hash law ambiguous: receipt_type {receipt_type} is multi-law \
+         and declares no event_hash_profile"
+    )]
+    EventHashLawAmbiguous {
+        /// The multi-law receipt type that lacked a discriminator.
+        receipt_type: String,
+    },
+
+    /// The declared profile is not verifiable by envelope-only RBH (its
+    /// identity binds an out-of-band input set, not the envelope bytes).
+    #[error("event_hash profile {profile} is not verifiable by envelope-only RBH")]
+    ProfileNotEnvelopeVerifiable {
+        /// The profile requiring bound-input (out-of-band) verification.
+        profile: String,
+    },
+
+    /// Envelope-commitment canonicalization failed.
+    #[error("envelope commitment failed: {0}")]
+    CommitmentError(String),
 }
 
 /// Verify the supported receipt-envelope version.
@@ -117,42 +141,73 @@ fn verify_envelope_version(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVeri
     }
 }
 
-/// Verify the payload digest declared in the receipt envelope.
-///
-/// As of Gate 2 (JCS Consumer Hardening Plan), delegates to the sealed
-/// [`crate::identity::PayloadEventDigest::recompute_from_payload_value`]
-/// constructor. Byte-stable with the prior inline
-/// `BLAKE3(to_canon_bytes_from_slice(to_vec(payload)))` implementation.
-///
-/// Note: the verifier's payload-only digest does NOT match
-/// `vertrule-schemas::ReceiptDigest::from_envelope_commitment`, which
-/// computes `BLAKE3(JCS(envelope \ {event_hash}))`. Reconciling that
-/// schemas-vs-verifier contract discrepancy is tracked separately
-/// from Gate 2.
-fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyError> {
-    let payload_value = serde_json::to_value(&envelope.payload)
-        .map_err(|e| ReceiptVerifyError::ParseError(e.to_string()))?;
-    let digest = crate::identity::PayloadEventDigest::recompute_from_payload_value(&payload_value)
-        .map_err(|e| ReceiptVerifyError::ParseError(format!("{e}")))?;
+/// The verification law for an envelope's `event_hash`, resolved from its
+/// profile (ADR-029 §3 / ADR-028R).
+enum EventHashLaw {
+    /// `constitutional_envelope_v1`: recompute `BLAKE3(JCS(envelope \ {event_hash}))`.
+    EnvelopeMinus,
+    /// `runtime_port_event_preimage_v1`: a typed-preimage identity that
+    /// envelope-only RBH cannot recompute from the envelope bytes
+    /// (ADR-016 / DEC-3 — the preimage binds the runtime-port input set).
+    RuntimePortPreimage,
+}
 
-    let bytes = digest.bytes();
-    let mut buf = [0u8; 32];
-    if bytes.len() != buf.len() {
-        return Err(ReceiptVerifyError::ParseError(format!(
-            "payload digest had unexpected length {}",
-            bytes.len()
-        )));
+/// `event` is the only multi-law `receipt_type` today (ADR-029): its
+/// `event_hash` may be either constitutional self-commitment or a RuntimePort
+/// typed preimage, so it requires an explicit discriminator.
+const fn is_multi_law(receipt_type: ReceiptType) -> bool {
+    matches!(receipt_type, ReceiptType::Event)
+}
+
+/// Resolve the digest-law profile for an envelope's `event_hash`.
+///
+/// Field-driven, never inferred (ADR-029 §3): the `event_hash_profile`
+/// discriminator selects the law. A multi-law `receipt_type` (`event`) with no
+/// discriminator is a hard reject. A single-law `receipt_type` without a
+/// discriminator resolves to the constitutional self-commitment law (the
+/// canonical law `vertrule-schemas` emits); it is **never** payload-only.
+fn resolve_profile(envelope: &ReceiptEnvelope) -> Result<EventHashLaw, ReceiptVerifyError> {
+    match envelope.event_hash_profile {
+        Some(EventHashProfileId::ConstitutionalEnvelopeV1) => Ok(EventHashLaw::EnvelopeMinus),
+        Some(EventHashProfileId::RuntimePortEventPreimageV1) => {
+            Ok(EventHashLaw::RuntimePortPreimage)
+        }
+        None if is_multi_law(envelope.receipt_type) => {
+            Err(ReceiptVerifyError::EventHashLawAmbiguous {
+                receipt_type: format!("{:?}", envelope.receipt_type),
+            })
+        }
+        None => Ok(EventHashLaw::EnvelopeMinus),
     }
-    buf.copy_from_slice(bytes);
-    let actual = DigestBytes::from_array(buf);
+}
 
-    if actual == envelope.event_hash {
-        Ok(())
-    } else {
-        Err(ReceiptVerifyError::EventHashMismatch {
-            expected: envelope.event_hash.to_hex(),
-            actual: actual.to_hex(),
-        })
+/// Verify the declared `event_hash` under its resolved digest-law profile.
+///
+/// - `constitutional_envelope_v1` → recompute
+///   `BLAKE3(JCS(envelope \ {event_hash}))` via the canonical schemas
+///   constructor [`compute_event_hash`] and compare.
+/// - `runtime_port_event_preimage_v1` → not recomputable from the envelope
+///   alone; envelope-only RBH refuses rather than recompute under the wrong
+///   law. Payload-only recomputation is **never** used on a public surface.
+fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyError> {
+    match resolve_profile(envelope)? {
+        EventHashLaw::EnvelopeMinus => {
+            let recomputed = compute_event_hash(envelope)
+                .map_err(|e| ReceiptVerifyError::CommitmentError(e.to_string()))?;
+            if recomputed == envelope.event_hash {
+                Ok(())
+            } else {
+                Err(ReceiptVerifyError::EventHashMismatch {
+                    expected: envelope.event_hash.to_hex(),
+                    actual: recomputed.to_hex(),
+                })
+            }
+        }
+        EventHashLaw::RuntimePortPreimage => {
+            Err(ReceiptVerifyError::ProfileNotEnvelopeVerifiable {
+                profile: "runtime_port_event_preimage_v1".to_string(),
+            })
+        }
     }
 }
 
@@ -166,7 +221,10 @@ fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyErro
 /// Performs:
 /// 1. Parse receipt bytes → [`ReceiptEnvelope`]
 /// 2. Verify the supported envelope version
-/// 3. Verify `BLAKE3(JCS(payload))` against the declared `event_hash`
+/// 3. Resolve the `event_hash` law profile (ADR-029) and verify the declared
+///    `event_hash`: envelope-minus recompute for `constitutional_envelope_v1`;
+///    refuse `runtime_port_event_preimage_v1` as not envelope-verifiable;
+///    reject a multi-law `event` receipt that declares no profile.
 /// 4. Extract all metadata fields
 ///
 /// [`ReceiptEnvelope`]: vertrule_schemas::ReceiptEnvelope

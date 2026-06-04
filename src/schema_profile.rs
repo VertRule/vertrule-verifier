@@ -27,6 +27,7 @@ const OPTIONAL_ENVELOPE_FIELDS: &[&str] = &[
     "boundary_origin",
     "digest_algorithm",
     "canonicalization",
+    "event_hash_profile",
 ];
 
 /// Known `receipt_type` values (canonical lowercase only).
