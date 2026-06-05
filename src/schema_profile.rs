@@ -39,6 +39,9 @@ const KNOWN_RECEIPT_TYPES: &[&str] = &[
     "adapter",
     "projection",
     "training",
+    "operation",
+    "finalization",
+    "abort",
 ];
 
 /// Known `boundary_origin` values (canonical lowercase only).

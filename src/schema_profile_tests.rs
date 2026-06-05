@@ -218,6 +218,9 @@ vr_test!(
             vertrule_schemas::ReceiptType::Adapter,
             vertrule_schemas::ReceiptType::Projection,
             vertrule_schemas::ReceiptType::Training,
+            vertrule_schemas::ReceiptType::Operation,
+            vertrule_schemas::ReceiptType::Finalization,
+            vertrule_schemas::ReceiptType::Abort,
         ];
         if schema_types.len() != super::KNOWN_RECEIPT_TYPES.len() {
             anyhow::bail!(
