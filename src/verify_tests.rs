@@ -17,7 +17,12 @@ fn build_envelope_value(
         serde_json::json!("a".repeat(64)),
     );
     obj.insert("envelope_version".to_string(), serde_json::json!(1));
-    obj.insert("logical_time".to_string(), serde_json::json!(logical_time));
+    // Canonical wire form is a decimal string (VR-CANONICAL-U64-STRING-POLICY-V1);
+    // the manually built hash preimage must match the typed re-serialization.
+    obj.insert(
+        "logical_time".to_string(),
+        serde_json::json!(logical_time.to_string()),
+    );
     if let Some(pid) = parent_id {
         obj.insert("parent_id".to_string(), serde_json::json!(pid));
     }

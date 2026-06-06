@@ -8,13 +8,13 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 100,
+      "logical_time": "100",
       "payload": {
         "domain": "test.governance.v1",
         "action": "initialize",
         "epoch": 0
       },
-      "event_hash": "7d85bb9128621eb8298ac97ebc3277a804c447ef4e12b523dfaf190f0e6cc760"
+      "event_hash": "67af29a31daa0edb282d244de97b5b065ad7a1acadc1c76a1dabc299c8a05eb3"
     },
     {
       "envelope_version": 1,
@@ -22,14 +22,14 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 200,
+      "logical_time": "200",
       "payload": {
         "domain": "test.governance.v1",
         "action": "update_policy",
         "policy_version": 2
       },
-      "parent_id": "7d85bb9128621eb8298ac97ebc3277a804c447ef4e12b523dfaf190f0e6cc760",
-      "event_hash": "3075b530916d03259da892788f4f9fc1691bc88f5a3367ed2eabae43e6a961a8"
+      "parent_id": "67af29a31daa0edb282d244de97b5b065ad7a1acadc1c76a1dabc299c8a05eb3",
+      "event_hash": "a9f5b7f9ef11f3825c7fdab0844dee0db0452c8aaadbe38247883902efb4008d"
     },
     {
       "envelope_version": 1,
@@ -37,14 +37,14 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 300,
+      "logical_time": "300",
       "payload": {
         "domain": "test.governance.v1",
         "action": "seal_epoch",
         "epoch": 1
       },
-      "parent_id": "3075b530916d03259da892788f4f9fc1691bc88f5a3367ed2eabae43e6a961a8",
-      "event_hash": "9b7db40c65b999d33b53bdf787cb199372d1baa1126d78f9d7e4ea964818fa9f"
+      "parent_id": "a9f5b7f9ef11f3825c7fdab0844dee0db0452c8aaadbe38247883902efb4008d",
+      "event_hash": "1fcf3fbe2609fe91ebea7a2c1461093cab7b6567f8d16fa69b24849695d1c5b8"
     }
   ]
 }

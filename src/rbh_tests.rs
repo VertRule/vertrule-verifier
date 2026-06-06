@@ -21,7 +21,7 @@ fn envelope_skeleton(
         "context_digest": DigestBytes::from_array([0xAA; 32]).to_hex(),
         "schema_digest": DigestBytes::from_array([0xBB; 32]).to_hex(),
         "policy_digest": DigestBytes::from_array([0xCC; 32]).to_hex(),
-        "logical_time": logical_time,
+        "logical_time": logical_time.to_string(),
         "payload": payload,
     });
     let map = obj

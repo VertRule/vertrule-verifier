@@ -9,11 +9,11 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 100,
+      "logical_time": "100",
       "payload": {
         "action": "duplicate"
       },
-      "event_hash": "0a45be7364bb532c4b9fde0110b08ee84fdc60680403c67344b2be45afc9ee31"
+      "event_hash": "664065b82c1d821aeba38cc43de29859fceb06d79038d9c3caa8af81f5aff1b8"
     },
     {
       "envelope_version": 1,
@@ -21,12 +21,12 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 200,
+      "logical_time": "200",
       "payload": {
         "action": "duplicate"
       },
-      "parent_id": "0a45be7364bb532c4b9fde0110b08ee84fdc60680403c67344b2be45afc9ee31",
-      "event_hash": "0a45be7364bb532c4b9fde0110b08ee84fdc60680403c67344b2be45afc9ee31"
+      "parent_id": "664065b82c1d821aeba38cc43de29859fceb06d79038d9c3caa8af81f5aff1b8",
+      "event_hash": "664065b82c1d821aeba38cc43de29859fceb06d79038d9c3caa8af81f5aff1b8"
     }
   ]
 }

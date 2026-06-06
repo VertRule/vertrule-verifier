@@ -38,7 +38,7 @@ vr_test!(
             serde_json::json!("a".repeat(64)),
         );
         obj.insert("envelope_version".to_string(), serde_json::json!(1));
-        obj.insert("logical_time".to_string(), serde_json::json!(1000));
+        obj.insert("logical_time".to_string(), serde_json::json!("1000"));
         obj.insert("payload".to_string(), payload);
         obj.insert(
             "policy_digest".to_string(),
@@ -93,7 +93,7 @@ vr_test!(
             serde_json::json!("a".repeat(64)),
         );
         obj.insert("envelope_version".to_string(), serde_json::json!(1));
-        obj.insert("logical_time".to_string(), serde_json::json!(1000));
+        obj.insert("logical_time".to_string(), serde_json::json!("1000"));
         obj.insert("payload".to_string(), payload);
         obj.insert(
             "policy_digest".to_string(),
@@ -144,7 +144,7 @@ vr_test!(
             serde_json::json!("a".repeat(64)),
         );
         obj.insert("envelope_version".to_string(), serde_json::json!(1));
-        obj.insert("logical_time".to_string(), serde_json::json!(1000));
+        obj.insert("logical_time".to_string(), serde_json::json!("1000"));
         obj.insert("payload".to_string(), payload);
         obj.insert(
             "policy_digest".to_string(),

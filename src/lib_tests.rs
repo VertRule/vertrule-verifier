@@ -7,7 +7,7 @@ use crate::envelope::{verify_envelope_version, verify_event_hash, ReceiptEnvelop
 use crate::error::VerifyError;
 use crate::test_support::{need, ok_when, vr_test};
 use vertrule_schemas::CanonicalPayload;
-use vertrule_schemas::{DigestBytes, IJsonUInt, ReceiptType, SchemaVersion};
+use vertrule_schemas::{DigestBytes, ReceiptType, SchemaVersion};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,14 +21,13 @@ fn make_envelope(
 ) -> anyhow::Result<ReceiptEnvelope> {
     let filler = DigestBytes::from_array([0u8; 32]);
     let canonical = CanonicalPayload::new(payload).map_err(|e| anyhow::anyhow!(e))?;
-    let lt = IJsonUInt::new(logical_time).map_err(|e| anyhow::anyhow!(e))?;
     let mut envelope: ReceiptEnvelope = serde_json::from_value(json!({
         "envelope_version": SchemaVersion::V1.get(),
         "receipt_type": ReceiptType::Governance,
         "context_digest": filler,
         "schema_digest": filler,
         "policy_digest": filler,
-        "logical_time": lt.get(),
+        "logical_time": logical_time,
         "event_hash": filler,
         "parent_id": parent_id,
         "payload": canonical,

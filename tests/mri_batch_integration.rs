@@ -6,7 +6,7 @@
 
 use serde_json::json;
 use vertrule_schemas::{
-    BatchReduction, BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, MriBatchPayload,
+    BatchReduction, BoundaryOrigin, CanonicalPayload, DigestBytes, MriBatchPayload,
     ReceiptEnvelope, ReceiptType, ReductionAxis, ReductionMode, ReductionProvenance, SchemaVersion,
     TokenReduction,
 };
@@ -48,7 +48,7 @@ fn envelope_from_batch_payload(
     let payload_value = serde_json::to_value(payload)?;
     let canonical = CanonicalPayload::new(payload_value)?;
     let zero = DigestBytes::from_array([0u8; 32]);
-    let logical_time = IJsonUInt::new(1)?;
+    let logical_time: u64 = 1;
 
     let mut envelope: ReceiptEnvelope = serde_json::from_value(json!({
         "envelope_version": SchemaVersion::V1.get(),
@@ -56,7 +56,7 @@ fn envelope_from_batch_payload(
         "context_digest": zero,
         "schema_digest": zero,
         "policy_digest": zero,
-        "logical_time": logical_time.get(),
+        "logical_time": logical_time,
         "event_hash": zero,
         "boundary_origin": BoundaryOrigin::Engine,
         "payload": canonical,

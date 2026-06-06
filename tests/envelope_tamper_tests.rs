@@ -5,8 +5,7 @@
 
 use vertrule_schemas::receipts::compute_event_hash;
 use vertrule_schemas::{
-    BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope, ReceiptType,
-    SchemaVersion,
+    BoundaryOrigin, CanonicalPayload, DigestBytes, ReceiptEnvelope, ReceiptType, SchemaVersion,
 };
 
 /// Typed canonicalization helper (non-deprecated round-trip).
@@ -27,14 +26,14 @@ fn make_valid_envelope() -> Result<ReceiptEnvelope, anyhow::Error> {
     }))
     .map_err(|e| anyhow::anyhow!(e))?;
 
-    let logical_time = IJsonUInt::new(1000)?;
+    let logical_time: u64 = 1000;
     let mut envelope: ReceiptEnvelope = serde_json::from_value(serde_json::json!({
         "envelope_version": SchemaVersion::V1.get(),
         "receipt_type": ReceiptType::Governance,
         "context_digest": DigestBytes::from_array([0xaa; 32]),
         "schema_digest": DigestBytes::from_array([0xbb; 32]),
         "policy_digest": DigestBytes::from_array([0xcc; 32]),
-        "logical_time": logical_time.get(),
+        "logical_time": logical_time,
         "event_hash": zero_digest(),
         "boundary_origin": BoundaryOrigin::Engine,
         "payload": payload,
@@ -101,7 +100,7 @@ fn envelope_tamper_policy_digest_fails() -> Result<(), anyhow::Error> {
 #[test]
 fn envelope_tamper_logical_time_fails() -> Result<(), anyhow::Error> {
     let mut envelope = make_valid_envelope()?;
-    envelope.logical_time = IJsonUInt::new(9999)?;
+    envelope.logical_time = 9999;
     let result = verify_envelope(&envelope)?;
     assert!(result.status != vertrule_verifier::result::VerificationStatus::Valid);
     Ok(())

@@ -135,8 +135,8 @@ pub(crate) fn check_chain_detail(envelopes: &[ReceiptEnvelope]) -> ChainDetail {
         if curr.logical_time <= prev.logical_time {
             errors.push(VerifyError::LogicalTimeNotMonotonic {
                 index: i,
-                previous: prev.logical_time.get(),
-                current: curr.logical_time.get(),
+                previous: prev.logical_time,
+                current: curr.logical_time,
             });
             ordering_ok = false;
         }

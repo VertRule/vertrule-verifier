@@ -72,7 +72,8 @@ fn build_envelope_with_digests(
         "context_digest": context_digest,
         "schema_digest": placeholder_hex_64(0xbb),
         "policy_digest": policy_digest,
-        "logical_time": logical_time,
+        // Canonical wire form is a decimal string (VR-CANONICAL-U64-STRING-POLICY-V1).
+        "logical_time": logical_time.to_string(),
         "payload": payload,
     });
 
@@ -264,7 +265,7 @@ fn gen_valid_with_algorithms(dir: &std::path::Path) -> Result<(), Box<dyn std::e
         "context_digest": placeholder_hex_64(0xaa),
         "schema_digest": placeholder_hex_64(0xbb),
         "policy_digest": placeholder_hex_64(0xcc),
-        "logical_time": 2000,
+        "logical_time": "2000",
         "digest_algorithm": "BLAKE3",
         "canonicalization": "JCS",
         "payload": payload,

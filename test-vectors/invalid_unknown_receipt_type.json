@@ -8,10 +8,10 @@
     "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "logical_time": 1000,
+    "logical_time": "1000",
     "payload": {
       "action": "test"
     },
-    "event_hash": "710c175bbffddbca7605cfd05706d1d628d48e92ac679ec7c8ece6c073088820"
+    "event_hash": "d9360242647e8c4acf20ce16e0dc20f209d8afe883e25455c8313247ea5b7f52"
   }
 }

@@ -193,8 +193,8 @@ fn verify_chain_envelopes(envelopes: &[ReceiptEnvelope]) -> VerificationResult {
 
     result.chain_validation = Some(ChainValidation {
         length: envelopes.len(),
-        first_logical_time: first.logical_time.get(),
-        last_logical_time: last.logical_time.get(),
+        first_logical_time: first.logical_time,
+        last_logical_time: last.logical_time,
     });
 
     result.context_consistency = Some(ContextConsistency {

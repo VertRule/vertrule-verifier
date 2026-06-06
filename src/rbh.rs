@@ -249,7 +249,7 @@ pub fn verify_external_receipt(
         schema_digest: envelope.schema_digest.to_hex(),
         event_hash: envelope.event_hash.to_hex(),
         receipt_type: format!("{:?}", envelope.receipt_type),
-        logical_time: envelope.logical_time.into(),
+        logical_time: envelope.logical_time,
         boundary_origin: envelope.boundary_origin.map(|bo| format!("{bo:?}")),
         payload: envelope.payload.into_value(),
     })

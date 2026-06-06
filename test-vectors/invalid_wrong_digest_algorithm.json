@@ -8,13 +8,13 @@
     "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "logical_time": 1000,
+    "logical_time": "1000",
     "payload": {
       "domain": "test.governance.v1",
       "action": "create",
       "value": 1
     },
-    "event_hash": "4a0b76644f680c449756bba3ce965718514cf0849dfb82fc17a8a4fdcfd7c376",
+    "event_hash": "75272545241a9ef3969ec11ff1d896d4fe0a5de7c5ffb6aa6bd3a2d272636b39",
     "digest_algorithm": "SHA256"
   }
 }

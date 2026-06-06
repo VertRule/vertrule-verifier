@@ -9,11 +9,11 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 100,
+      "logical_time": "100",
       "payload": {
         "step": 0
       },
-      "event_hash": "5dd34eac21e87919fa38734d01ec616f64eed030e6b5ec3349aa3456e0035a67"
+      "event_hash": "61ffb4df3d126347beff30ad8afab2525ce517ab85892c2f1cbebb4312dbcbb7"
     },
     {
       "envelope_version": 1,
@@ -21,12 +21,12 @@
       "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      "logical_time": 200,
+      "logical_time": "200",
       "payload": {
         "step": 1
       },
       "parent_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      "event_hash": "599acd631890f898df8104a6176d60cbd8d34fdf12cabaa08a484d8cf1701cb5"
+      "event_hash": "f66fd0d9c70170d643ddc587214b5ffb291630338e1f568ec4dbd060b2508be1"
     }
   ]
 }

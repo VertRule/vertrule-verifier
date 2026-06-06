@@ -1,8 +1,7 @@
 //! Integration tests for resource limits enforcement.
 
 use vertrule_schemas::{
-    BoundaryOrigin, CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope, ReceiptType,
-    SchemaVersion,
+    BoundaryOrigin, CanonicalPayload, DigestBytes, ReceiptEnvelope, ReceiptType, SchemaVersion,
 };
 use vertrule_verifier::limits::VerifierLimits;
 use vertrule_verifier::result::VerificationStatus;
@@ -29,14 +28,13 @@ fn make_envelope(
     let payload = CanonicalPayload::new(serde_json::json!({"t": logical_time}))
         .map_err(|e| anyhow::anyhow!(e))?;
 
-    let logical_time = IJsonUInt::new(logical_time)?;
     let mut envelope: ReceiptEnvelope = serde_json::from_value(serde_json::json!({
         "envelope_version": SchemaVersion::V1.get(),
         "receipt_type": ReceiptType::Event,
         "context_digest": zero_digest(),
         "schema_digest": zero_digest(),
         "policy_digest": zero_digest(),
-        "logical_time": logical_time.get(),
+        "logical_time": logical_time,
         "event_hash": zero_digest(),
         "parent_id": parent_id,
         "boundary_origin": BoundaryOrigin::Engine,

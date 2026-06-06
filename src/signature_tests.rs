@@ -7,7 +7,7 @@ use serde_json::json;
 
 use super::*;
 use vertrule_schemas::{
-    CanonicalPayload, DigestBytes, IJsonUInt, ReceiptEnvelope, ReceiptType, SchemaVersion,
+    CanonicalPayload, DigestBytes, ReceiptEnvelope, ReceiptType, SchemaVersion,
 };
 
 /// Create a deterministic test signing key (no RNG).
@@ -30,7 +30,7 @@ fn zero_digest() -> DigestBytes {
 fn make_test_envelope(payload_json: serde_json::Value) -> Result<ReceiptEnvelope, anyhow::Error> {
     let payload =
         CanonicalPayload::new(payload_json).map_err(|e| anyhow::anyhow!("payload: {e}"))?;
-    let logical_time = IJsonUInt::new(1).map_err(|e| anyhow::anyhow!("logical_time: {e}"))?;
+    let logical_time: u64 = 1;
 
     let mut envelope: ReceiptEnvelope = serde_json::from_value(json!({
         "envelope_version": SchemaVersion::V1.get(),
@@ -38,7 +38,7 @@ fn make_test_envelope(payload_json: serde_json::Value) -> Result<ReceiptEnvelope
         "context_digest": zero_digest(),
         "schema_digest": zero_digest(),
         "policy_digest": zero_digest(),
-        "logical_time": logical_time.get(),
+        "logical_time": logical_time,
         "event_hash": zero_digest(),
         "payload": payload,
     }))

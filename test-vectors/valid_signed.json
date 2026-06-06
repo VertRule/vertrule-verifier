@@ -7,12 +7,12 @@
     "context_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "schema_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "policy_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "logical_time": 1000,
+    "logical_time": "1000",
     "payload": {
       "domain": "test.governance.v1",
       "action": "signed_change",
       "version": 1
     },
-    "event_hash": "52ea589cab711bfd08d9f06b1ec4bba2866b299a743c266a641acc47b6049dd3"
+    "event_hash": "9e4aa916f1052351fb8e814fce77d6b4c01199b60f661cb9457ba6349100ed11"
   }
 }
