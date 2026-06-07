@@ -1,6 +1,6 @@
 //! Byte-stability tests for verifier-owned sealed identity newtypes.
 
-use super::{PayloadEventDigest, SidecarDigest};
+use super::SidecarDigest;
 use crate::error::VerifyError;
 
 #[test]
@@ -53,42 +53,6 @@ fn sidecar_digest_to_hex_is_lowercase_64_chars() -> Result<(), VerifyError> {
     assert!(hex
         .chars()
         .all(|c: char| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
-    Ok(())
-}
-
-// ── PayloadEventDigest ────────────────────────────────────────────
-
-#[test]
-fn payload_event_digest_byte_stable_with_legacy_raw_byte_path() -> Result<(), VerifyError> {
-    let payload = serde_json::json!({"hello": "world", "value": 42});
-
-    // Sealed path: via typed Value.
-    let sealed = PayloadEventDigest::recompute_from_payload_value(&payload)?;
-
-    // Legacy-equivalent path: what `rbh.rs::verify_event_hash` did
-    // pre-Gate-2 (serialize to vec, strict-parse + canonicalize via
-    // `to_canon_bytes_from_slice`, then `blake3::hash`).
-    // ALLOW-JCS-SPEC: byte-stability assertion against legacy bypass
-    let legacy_json_bytes =
-        serde_json::to_vec(&payload).map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    let legacy_canon_bytes = vr_jcs::to_canon_bytes_from_slice(&legacy_json_bytes)
-        .map_err(|e| VerifyError::Canon(format!("{e}")))?;
-    let legacy_hash = blake3::hash(&legacy_canon_bytes);
-
-    assert_eq!(
-        sealed.bytes(),
-        legacy_hash.as_bytes(),
-        "PayloadEventDigest::recompute_from_payload_value must byte-equal \
-         BLAKE3(JCS(payload)) computed via the legacy raw-byte path",
-    );
-    Ok(())
-}
-
-#[test]
-fn payload_event_digest_algorithm_name_is_blake3_untagged() -> Result<(), VerifyError> {
-    let payload = serde_json::json!({"x": 1});
-    let sealed = PayloadEventDigest::recompute_from_payload_value(&payload)?;
-    assert_eq!(sealed.algorithm_name(), "blake3-untagged");
     Ok(())
 }
 

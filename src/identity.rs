@@ -87,63 +87,6 @@ impl SidecarDigest {
     }
 }
 
-// ── PayloadEventDigest ───────────────────────────────────────────
-// Verifier-side recompute of the receipt-payload digest, compared
-// against `envelope.event_hash`.
-
-/// Sealed verifier-side digest of `envelope.payload`, computed for
-/// comparison against the declared `envelope.event_hash`.
-///
-/// `BLAKE3(JCS(envelope.payload))`.
-///
-/// # Discrepancy with `vertrule-schemas::ReceiptDigest`
-///
-/// `vertrule-schemas::ReceiptDigest::from_envelope_commitment` (the
-/// emit-side constructor) computes `BLAKE3(JCS(envelope \ {event_hash}))`
-/// — the entire envelope minus the `event_hash` field. The verifier's
-/// `verify_event_hash` (pre-Gate-2) computes only `BLAKE3(JCS(envelope.payload))`.
-/// These are **different** identities and would not match for any
-/// envelope whose non-payload trust-bearing fields participate in the
-/// commitment.
-///
-/// Gate 2 preserves the verifier's existing behavior under this sealed
-/// newtype. Reconciling the two is **not** Gate 2 scope — it is a
-/// separate receipt-schema-vs-verifier contract decision to be ADR'd.
-#[derive(Debug, Clone)]
-pub struct PayloadEventDigest {
-    inner: CanonicalDigest,
-}
-
-impl PayloadEventDigest {
-    /// Recompute `BLAKE3(JCS(payload))` from a typed payload value.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`VerifyError::Canon`] if canonicalization fails.
-    pub fn recompute_from_payload_value(payload: &serde_json::Value) -> Result<Self, VerifyError> {
-        let inner = digest_trusted_value(payload, &DigestStrategy::blake3_untagged())?;
-        Ok(Self { inner })
-    }
-
-    /// Stable algorithm-name identifier.
-    #[must_use]
-    pub const fn algorithm_name(&self) -> &'static str {
-        self.inner.algorithm.name()
-    }
-
-    /// Borrow the raw digest bytes.
-    #[must_use]
-    pub fn bytes(&self) -> &[u8] {
-        &self.inner.bytes
-    }
-
-    /// Consume and return the algorithm-bearing [`CanonicalDigest`].
-    #[must_use]
-    pub fn into_canonical_digest(self) -> CanonicalDigest {
-        self.inner
-    }
-}
-
 // ── GenericByteDigest ────────────────────────────────────────────
 // Binary identity: BLAKE3 over arbitrary input bytes, NOT JCS.
 

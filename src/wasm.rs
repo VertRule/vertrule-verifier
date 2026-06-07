@@ -163,12 +163,11 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash = BLAKE3(JCS(envelope \ {event_hash}))
-        // Migrated to PayloadEventDigest (Gate 2): byte-stable with
-        // the legacy `BLAKE3(canon_bytes)` path.
+        // event_hash = BLAKE3(JCS(envelope \ {event_hash})) over the
+        // event_hash-less map, computed via the sealed BLAKE3(JCS(value)) helper.
         let envelope_value = serde_json::Value::Object(obj.clone());
         let Ok(digest) =
-            crate::identity::PayloadEventDigest::recompute_from_payload_value(&envelope_value)
+            crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
         else {
             return;
         };
@@ -236,10 +235,10 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash via sealed PayloadEventDigest (Gate 2; byte-stable).
+        // event_hash via the sealed BLAKE3(JCS(value)) helper.
         let envelope_value = serde_json::Value::Object(obj.clone());
         let Ok(digest) =
-            crate::identity::PayloadEventDigest::recompute_from_payload_value(&envelope_value)
+            crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
         else {
             return;
         };
@@ -344,10 +343,10 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash via sealed PayloadEventDigest (Gate 2; byte-stable).
+        // event_hash via the sealed BLAKE3(JCS(value)) helper.
         let envelope_value = serde_json::Value::Object(obj.clone());
         let Ok(digest) =
-            crate::identity::PayloadEventDigest::recompute_from_payload_value(&envelope_value)
+            crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
         else {
             return;
         };
