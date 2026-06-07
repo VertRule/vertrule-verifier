@@ -13,7 +13,7 @@
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use vertrule_schemas::receipts::compute_event_hash;
+use vr_receipt_identity::compute_event_hash;
 use vertrule_schemas::{EventHashProfileId, ReceiptEnvelope, ReceiptType, SchemaVersion};
 
 /// Metadata extracted from a structurally verified external receipt.

@@ -492,6 +492,7 @@ dependencies = [
  "thiserror",
  "vertrule-schemas",
  "vr-jcs",
+ "vr-receipt-identity",
  "wasm-bindgen",
 ]
 
@@ -503,6 +504,16 @@ dependencies = [
  "serde",
  "serde_json",
  "zmij",
+]
+
+[[package]]
+name = "vr-receipt-identity"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "thiserror",
+ "vertrule-schemas",
+ "vr-jcs",
 ]
 
 [[package]]

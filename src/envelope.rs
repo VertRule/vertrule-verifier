@@ -18,7 +18,7 @@ pub use vertrule_schemas::ReceiptEnvelope;
 /// does not equal the declared `event_hash`, or [`VerifyError::Canon`] if
 /// canonicalization fails.
 pub fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), VerifyError> {
-    let computed_digest = vertrule_schemas::receipts::compute_event_hash(envelope)
+    let computed_digest = vr_receipt_identity::compute_event_hash(envelope)
         .map_err(|e| VerifyError::Canon(format!("{e}")))?;
 
     if computed_digest == envelope.event_hash {
