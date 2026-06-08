@@ -166,8 +166,7 @@ mod tests {
         // event_hash = BLAKE3(JCS(envelope \ {event_hash})) over the
         // event_hash-less map, computed via the sealed BLAKE3(JCS(value)) helper.
         let envelope_value = serde_json::Value::Object(obj.clone());
-        let Ok(digest) =
-            crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
+        let Ok(digest) = crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
         else {
             return;
         };
@@ -237,8 +236,7 @@ mod tests {
 
         // event_hash via the sealed BLAKE3(JCS(value)) helper.
         let envelope_value = serde_json::Value::Object(obj.clone());
-        let Ok(digest) =
-            crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
+        let Ok(digest) = crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
         else {
             return;
         };
@@ -345,8 +343,7 @@ mod tests {
 
         // event_hash via the sealed BLAKE3(JCS(value)) helper.
         let envelope_value = serde_json::Value::Object(obj.clone());
-        let Ok(digest) =
-            crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
+        let Ok(digest) = crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
         else {
             return;
         };
