@@ -163,16 +163,18 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash = BLAKE3(JCS(envelope \ {event_hash})) over the
-        // event_hash-less map, computed via the sealed BLAKE3(JCS(value)) helper.
-        let envelope_value = serde_json::Value::Object(obj.clone());
-        let Ok(digest) = crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
-        else {
+        // event_hash = BLAKE3(JCS(envelope \ {event_hash})), computed via the
+        // canonical law so it matches the verifier's own recompute.
+        obj.insert("event_hash".to_string(), serde_json::json!("0".repeat(64)));
+        let Ok(envelope) = serde_json::from_value::<vertrule_schemas::ReceiptEnvelope>(
+            serde_json::Value::Object(obj.clone()),
+        ) else {
             return;
         };
-        let event_hash = hex::encode(digest.bytes());
-
-        obj.insert("event_hash".to_string(), serde_json::json!(&event_hash));
+        let Ok(digest) = vr_receipt_identity::compute_event_hash(&envelope) else {
+            return;
+        };
+        obj.insert("event_hash".to_string(), serde_json::json!(digest.to_hex()));
 
         let value = serde_json::Value::Object(obj);
         let Ok(input) = crate::canon::typed_canon_string(&value) else {
@@ -234,16 +236,17 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash via the sealed BLAKE3(JCS(value)) helper.
-        let envelope_value = serde_json::Value::Object(obj.clone());
-        let Ok(digest) = crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
-        else {
+        // event_hash via the canonical law (matches verifier recompute).
+        obj.insert("event_hash".to_string(), serde_json::json!("0".repeat(64)));
+        let Ok(envelope) = serde_json::from_value::<vertrule_schemas::ReceiptEnvelope>(
+            serde_json::Value::Object(obj.clone()),
+        ) else {
             return;
         };
-        obj.insert(
-            "event_hash".to_string(),
-            serde_json::json!(hex::encode(digest.bytes())),
-        );
+        let Ok(digest) = vr_receipt_identity::compute_event_hash(&envelope) else {
+            return;
+        };
+        obj.insert("event_hash".to_string(), serde_json::json!(digest.to_hex()));
         let value = serde_json::Value::Object(obj);
         let Ok(receipt_json) = crate::canon::typed_canon_string(&value) else {
             return;
@@ -341,15 +344,17 @@ mod tests {
             serde_json::json!("b".repeat(64)),
         );
 
-        // event_hash via the sealed BLAKE3(JCS(value)) helper.
-        let envelope_value = serde_json::Value::Object(obj.clone());
-        let Ok(digest) = crate::identity::SidecarDigest::recompute_from_value(&envelope_value)
-        else {
+        // event_hash via the canonical law (matches verifier recompute).
+        obj.insert("event_hash".to_string(), serde_json::json!("0".repeat(64)));
+        let Ok(envelope) = serde_json::from_value::<vertrule_schemas::ReceiptEnvelope>(
+            serde_json::Value::Object(obj.clone()),
+        ) else {
             return;
         };
-        let event_hash = hex::encode(digest.bytes());
-
-        obj.insert("event_hash".to_string(), serde_json::json!(&event_hash));
+        let Ok(digest) = vr_receipt_identity::compute_event_hash(&envelope) else {
+            return;
+        };
+        obj.insert("event_hash".to_string(), serde_json::json!(digest.to_hex()));
 
         let value = serde_json::Value::Object(obj);
         let Ok(input) = crate::canon::typed_canon_string(&value) else {
