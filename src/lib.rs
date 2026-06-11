@@ -27,6 +27,7 @@ pub mod bundle;
 pub(crate) mod canon;
 pub(crate) mod canonical_identity;
 pub mod chain;
+pub mod decision_pack;
 pub mod envelope;
 pub mod error;
 pub mod identity;
@@ -45,6 +46,9 @@ pub mod wasm;
 
 pub use bundle::{verify_bundle, BundleVerificationResult, SidecarDigestCheck};
 pub use chain::verify_chain;
+pub use decision_pack::{
+    verify_decision_pack, DecisionPackVerificationResult, MemberStatus, SupportMemberCheck,
+};
 pub use envelope::{validate_receipt_envelope_integrity, ReceiptEnvelope};
 pub use error::VerifyError;
 pub use limits::{LimitViolation, VerifierLimits};

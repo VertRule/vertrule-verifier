@@ -112,6 +112,23 @@ pub fn verify_bundle_json(bundle_json: &str) -> String {
     }
 }
 
+/// Verify a decision pack (decision receipt + depended-on receipts).
+///
+/// Accepts the full pack JSON string (`vr-decision-pack/v1` format).
+/// Returns a `DecisionPackVerificationResult` serialized as JCS-canonical
+/// JSON, including the per-member support-set walk.
+///
+/// This function never throws. Malformed input produces an `INVALID` result.
+#[must_use]
+#[wasm_bindgen]
+pub fn verify_decision_pack_json(pack_json: &str) -> String {
+    let result = crate::verify_decision_pack(pack_json.as_bytes());
+    match result.to_canon_string() {
+        Ok(s) => s,
+        Err(e) => error_json(&format!("canonicalization error: {e}")),
+    }
+}
+
 /// Compute the BLAKE3 digest of arbitrary bytes, returned as a 64-char hex string.
 ///
 /// Useful for the website to compute digests client-side for display
