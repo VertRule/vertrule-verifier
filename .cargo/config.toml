@@ -1,0 +1,4 @@
+
+# Suite-shared intermediate dir (ADR-035; managed by governance/tools/build-dir-sync.sh)
+[build]
+build-dir = "/Users/davidingle/Home/active/VertRule/repositories/.shared-build-dir"
