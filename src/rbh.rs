@@ -11,80 +11,17 @@
 //! (`vr_app::validate_authorization_request`) remains in the policy
 //! substrate.
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use vertrule_schemas::{EventHashProfileId, ReceiptEnvelope, ReceiptType, SchemaVersion};
 use vr_receipt_identity::compute_event_hash;
 
-/// Metadata extracted from a structurally verified external receipt.
-///
-/// Produced exclusively by [`verify_external_receipt`]. Fields are private
-/// to prevent construction outside the causal verification pipeline.
-/// Use accessor methods to read individual fields.
-///
-/// In tests, construct canonical receipt bytes and pass them through
-/// [`verify_external_receipt`] — the same path production code takes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VerifiedReceiptMetadata {
-    context_digest: String,
-    policy_digest: String,
-    schema_digest: String,
-    event_hash: String,
-    receipt_type: String,
-    logical_time: u64,
-    boundary_origin: Option<String>,
-    payload: serde_json::Value,
-}
-
-impl VerifiedReceiptMetadata {
-    /// BLAKE3 digest of the originating execution context.
-    #[must_use]
-    pub fn context_digest(&self) -> &str {
-        &self.context_digest
-    }
-
-    /// BLAKE3 digest of the policy pack active at evidence time.
-    #[must_use]
-    pub fn policy_digest(&self) -> &str {
-        &self.policy_digest
-    }
-
-    /// BLAKE3 digest of the schema used.
-    #[must_use]
-    pub fn schema_digest(&self) -> &str {
-        &self.schema_digest
-    }
-
-    /// BLAKE3 hash of the canonical payload.
-    #[must_use]
-    pub fn event_hash(&self) -> &str {
-        &self.event_hash
-    }
-
-    /// Receipt type discriminator (e.g., "Governance").
-    #[must_use]
-    pub fn receipt_type(&self) -> &str {
-        &self.receipt_type
-    }
-
-    /// Monotonic logical timestamp from the originating context.
-    #[must_use]
-    pub const fn logical_time(&self) -> u64 {
-        self.logical_time
-    }
-
-    /// Boundary origin tag, if present.
-    #[must_use]
-    pub fn boundary_origin(&self) -> Option<&str> {
-        self.boundary_origin.as_deref()
-    }
-
-    /// The receipt payload as structured JSON.
-    #[must_use]
-    pub const fn payload(&self) -> &serde_json::Value {
-        &self.payload
-    }
-}
+/// The verified-receipt metadata carrier now lives in `vertrule-schemas`
+/// (ADR-038 Phase 1), below both this crate and the policy substrate, so
+/// the substrate can consume it without depending on the verifier. It is
+/// re-exported here to preserve the `vertrule_verifier::VerifiedReceiptMetadata`
+/// public path. Production construction still flows exclusively through
+/// [`verify_external_receipt`].
+pub use vertrule_schemas::VerifiedReceiptMetadata;
 
 /// Errors from structural receipt verification.
 #[derive(Debug, Error)]
@@ -243,16 +180,16 @@ pub fn verify_external_receipt(
 
     verify_event_hash(&envelope)?;
 
-    Ok(VerifiedReceiptMetadata {
-        context_digest: envelope.context_digest.to_hex(),
-        policy_digest: envelope.policy_digest.to_hex(),
-        schema_digest: envelope.schema_digest.to_hex(),
-        event_hash: envelope.event_hash.to_hex(),
-        receipt_type: format!("{:?}", envelope.receipt_type),
-        logical_time: envelope.logical_time,
-        boundary_origin: envelope.boundary_origin.map(|bo| format!("{bo:?}")),
-        payload: envelope.payload.into_value(),
-    })
+    Ok(VerifiedReceiptMetadata::new(
+        envelope.context_digest.to_hex(),
+        envelope.policy_digest.to_hex(),
+        envelope.schema_digest.to_hex(),
+        envelope.event_hash.to_hex(),
+        format!("{:?}", envelope.receipt_type),
+        envelope.logical_time,
+        envelope.boundary_origin.map(|bo| format!("{bo:?}")),
+        envelope.payload.into_value(),
+    ))
 }
 
 #[cfg(test)]
