@@ -129,6 +129,26 @@ pub fn verify_decision_pack_json(pack_json: &str) -> String {
     }
 }
 
+/// Verify a closure-committed layered bundle (ADR-040).
+///
+/// Accepts the full bundle JSON string (`vr-layered-bundle/v1` format): a
+/// root `pack.v0` receipt, a closure manifest, and the transitive
+/// dependency closure. Returns a `ClosureBundleVerificationResult`
+/// serialized as JCS-canonical JSON, including the manifest-digest check,
+/// closure completeness, cycle detection, and the per-edge walk.
+///
+/// This function never throws. Malformed input produces an `INVALID` result.
+#[must_use]
+#[wasm_bindgen]
+pub fn verify_closure_bundle_json(bundle_json: &str) -> String {
+    let result = crate::verify_closure_bundle(bundle_json.as_bytes());
+    match result.to_canon_bytes() {
+        Ok(bytes) => String::from_utf8(bytes)
+            .unwrap_or_else(|_| error_json("closure bundle result was not valid UTF-8")),
+        Err(e) => error_json(&format!("canonicalization error: {e}")),
+    }
+}
+
 /// Compute the BLAKE3 digest of arbitrary bytes, returned as a 64-char hex string.
 ///
 /// Useful for the website to compute digests client-side for display
