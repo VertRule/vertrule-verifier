@@ -27,6 +27,7 @@ pub mod bundle;
 pub(crate) mod canon;
 pub(crate) mod canonical_identity;
 pub mod chain;
+pub mod closure_bundle;
 pub mod decision_pack;
 pub mod envelope;
 pub mod error;
@@ -47,6 +48,7 @@ pub mod wasm;
 
 pub use bundle::{verify_bundle, BundleVerificationResult, SidecarDigestCheck};
 pub use chain::verify_chain;
+pub use closure_bundle::{verify_closure_bundle, ClosureBundleVerificationResult};
 pub use decision_pack::{
     verify_decision_pack, DecisionPackVerificationResult, MemberStatus, SupportMemberCheck,
 };
