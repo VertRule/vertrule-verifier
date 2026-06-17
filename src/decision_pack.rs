@@ -340,6 +340,34 @@ fn walk_member(
         SupportMember::SelectorValue { key, .. } => {
             check("selector_value", key, MemberStatus::Committed, None)
         }
+        // Typed lineage edges (ADR-040) resolve by replay exactly like an
+        // untyped depended-on receipt; the layered-family laws (target
+        // schema match, untyped-edge rejection) are enforced by the
+        // layered-pack verifier, not this one-level decision walk.
+        SupportMember::TypedReceiptDependency { event_hash, .. } => {
+            if verified_hashes.iter().any(|h| h == event_hash) {
+                check(
+                    "typed_receipt_dependency",
+                    event_hash,
+                    MemberStatus::Verified,
+                    None,
+                )
+            } else if let Some((_, detail)) = failed_hashes.iter().find(|(h, _)| h == event_hash) {
+                check(
+                    "typed_receipt_dependency",
+                    event_hash,
+                    MemberStatus::Failed,
+                    Some(format!("supplied receipt does not verify: {detail}")),
+                )
+            } else {
+                check(
+                    "typed_receipt_dependency",
+                    event_hash,
+                    MemberStatus::Missing,
+                    Some("committed receipt not supplied in pack".to_string()),
+                )
+            }
+        }
     }
 }
 

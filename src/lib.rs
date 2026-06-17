@@ -31,6 +31,7 @@ pub mod decision_pack;
 pub mod envelope;
 pub mod error;
 pub mod identity;
+pub mod layered_pack;
 pub mod ingestion;
 pub mod limits;
 pub mod mri_profile;
@@ -51,6 +52,9 @@ pub use decision_pack::{
 };
 pub use envelope::{validate_receipt_envelope_integrity, ReceiptEnvelope};
 pub use error::VerifyError;
+pub use layered_pack::{
+    verify_layered_pack, EdgeCheck, EdgeStatus, LayeredPackVerificationResult,
+};
 pub use limits::{LimitViolation, VerifierLimits};
 pub use mri_profile::{validate_gradient_coupling_payload, validate_mri_batch_payload};
 pub use rbh::{verify_external_receipt, ReceiptVerifyError, VerifiedReceiptMetadata};
