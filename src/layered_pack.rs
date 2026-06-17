@@ -235,9 +235,7 @@ pub fn verify_layered_pack(raw_bytes: &[u8]) -> LayeredPackVerificationResult {
 
 /// Extract `(payload_kind, support_set)` from a layered root envelope,
 /// rejecting any non-layered payload kind.
-fn extract_layered_payload(
-    envelope_json: &str,
-) -> Result<(String, Vec<SupportMember>), String> {
+fn extract_layered_payload(envelope_json: &str) -> Result<(String, Vec<SupportMember>), String> {
     let value: serde_json::Value =
         serde_json::from_str(envelope_json).map_err(|e| format!("malformed envelope: {e}"))?;
     let payload = value
@@ -265,7 +263,9 @@ fn extract_layered_payload(
 /// Verify a supplied receipt and read its `event_hash` + `payload_kind`.
 fn index_supplied(envelope_json: &str) -> Option<SuppliedReceipt> {
     let value: serde_json::Value = serde_json::from_str(envelope_json).ok()?;
-    let event_hash = value.get("event_hash").and_then(serde_json::Value::as_str)?;
+    let event_hash = value
+        .get("event_hash")
+        .and_then(serde_json::Value::as_str)?;
     let payload_kind = value
         .get("payload")
         .and_then(|p| p.get("payload_kind"))

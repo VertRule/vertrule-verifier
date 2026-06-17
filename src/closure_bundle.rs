@@ -27,9 +27,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
-use vertrule_schemas::receipts::{
-    MODEL_PAYLOAD_KIND, PACK_PAYLOAD_KIND, PROVIDER_PAYLOAD_KIND,
-};
+use vertrule_schemas::receipts::{MODEL_PAYLOAD_KIND, PACK_PAYLOAD_KIND, PROVIDER_PAYLOAD_KIND};
 use vertrule_schemas::SupportMember;
 
 use crate::error::VerifyError;
@@ -41,11 +39,7 @@ use crate::schema_profile::PROFILE_VERSION;
 const EXPECTED_FORMAT: &str = "vr-layered-bundle/v1";
 
 /// Layered-family payload kinds admitted in a closure bundle.
-const LAYERED_KINDS: [&str; 3] = [
-    PROVIDER_PAYLOAD_KIND,
-    MODEL_PAYLOAD_KIND,
-    PACK_PAYLOAD_KIND,
-];
+const LAYERED_KINDS: [&str; 3] = [PROVIDER_PAYLOAD_KIND, MODEL_PAYLOAD_KIND, PACK_PAYLOAD_KIND];
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -424,11 +418,16 @@ fn classify_edge(
     match target {
         None => (
             EdgeStatus::Missing,
-            Some(format!("depended-on receipt \"{event_hash}\" not supplied in bundle")),
+            Some(format!(
+                "depended-on receipt \"{event_hash}\" not supplied in bundle"
+            )),
         ),
         Some(n) if n.verify_status != VerificationStatus::Valid => (
             EdgeStatus::Failed,
-            Some(format!("supplied receipt does not verify: {}", n.verify_detail)),
+            Some(format!(
+                "supplied receipt does not verify: {}",
+                n.verify_detail
+            )),
         ),
         Some(n) if n.payload_kind != target_schema => (
             EdgeStatus::SchemaMismatch,

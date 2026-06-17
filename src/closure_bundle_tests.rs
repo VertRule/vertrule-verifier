@@ -132,8 +132,7 @@ vr_test!(
     fn tampered_manifest_digest_rejected() {
         let (provider, provider_hash) = build_provider()?;
         let (model, model_hash) = build_model(&provider_hash)?;
-        let (mut manifest, manifest_digest) =
-            build_manifest(&[&model_hash, &provider_hash])?;
+        let (mut manifest, manifest_digest) = build_manifest(&[&model_hash, &provider_hash])?;
         // Flip the manifest's self-digest; the root still commits the real one.
         manifest["manifest_digest"] = serde_json::json!("0".repeat(64));
         let (pack, _) = build_pack(&manifest_digest, &model_hash)?;
@@ -176,8 +175,7 @@ vr_test!(
         let (provider, provider_hash) = build_provider()?;
         let (model, model_hash) = build_model(&provider_hash)?;
         let bogus = "e".repeat(64);
-        let (manifest, manifest_digest) =
-            build_manifest(&[&model_hash, &provider_hash, &bogus])?;
+        let (manifest, manifest_digest) = build_manifest(&[&model_hash, &provider_hash, &bogus])?;
         let (pack, _) = build_pack(&manifest_digest, &model_hash)?;
         let bundle = serde_json::json!({
             "_format": "vr-layered-bundle/v1",
@@ -270,6 +268,9 @@ vr_test!(
             &mut edge_checks,
             &mut cycle,
         );
-        assert!(cycle, "mutually-referential depends_on edges must trip the cycle guard");
+        assert!(
+            cycle,
+            "mutually-referential depends_on edges must trip the cycle guard"
+        );
     }
 );
