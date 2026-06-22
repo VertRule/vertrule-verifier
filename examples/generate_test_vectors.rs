@@ -126,6 +126,12 @@ fn get_hash(env: &serde_json::Value) -> Result<String, Box<dyn std::error::Error
         .ok_or_else(|| "missing event_hash".into())
 }
 
+/// JCS-canonical string form of an envelope value (the wire form a pack embeds
+/// as `root_canonical` / `receipts[]`).
+fn canon_string(value: &serde_json::Value) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(String::from_utf8(canon_bytes(value)?)?)
+}
+
 // ---------------------------------------------------------------------------
 // Valid vectors
 // ---------------------------------------------------------------------------
@@ -670,6 +676,193 @@ fn gen_invalid_signature(dir: &std::path::Path) -> Result<(), Box<dyn std::error
 // Main
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Layered-family pack vectors (ADR-040)
+// ---------------------------------------------------------------------------
+
+/// Build a `model.v0` root receipt that depends on `provider_hash` through a
+/// single typed edge with the given `role` and `target_schema`.
+fn build_layered_model(
+    provider_hash: &str,
+    role: &str,
+    target_schema: &str,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    build_envelope(
+        &json!({
+            "payload_kind": "model.v0",
+            "model_id": "claude-opus-4-8",
+            "support_set": [{
+                "member_kind": "typed_receipt_dependency",
+                "event_hash": provider_hash,
+                "relation": "depends_on",
+                "role": role,
+                "target_schema": target_schema
+            }]
+        }),
+        1001,
+        None,
+        "event",
+    )
+}
+
+/// Valid + single-fault-invalid `vr-layered-pack/v1` artifacts.
+///
+/// Canonical graph: one `provider.v0` receipt → one `model.v0` root via a typed
+/// `maker` edge targeting `provider.v0`. The invalid variant applies one
+/// semantic mutation — the edge's `target_schema` no longer matches the
+/// provider's payload kind — so the ADR-040 composition law rejects it.
+fn gen_layered_pack(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let provider = build_envelope(
+        &json!({
+            "payload_kind": "provider.v0",
+            "provider_id": "anthropic",
+            "support_set": [
+                {"member_kind": "evidence_digest", "id": "soc2", "digest": "f".repeat(64)}
+            ]
+        }),
+        1000,
+        None,
+        "event",
+    )?;
+    let provider_canon = canon_string(&provider)?;
+    let provider_hash = get_hash(&provider)?;
+
+    let model = build_layered_model(&provider_hash, "maker", "provider.v0")?;
+    let valid = json!({
+        "_format": "vr-layered-pack/v1",
+        "root_canonical": canon_string(&model)?,
+        "receipts": [provider_canon],
+    });
+    write_raw(dir, "valid_layered_pack", &valid)?;
+
+    let model_bad = build_layered_model(&provider_hash, "maker", "model.v0")?;
+    let invalid = json!({
+        "_format": "vr-layered-pack/v1",
+        "root_canonical": canon_string(&model_bad)?,
+        "receipts": [provider_canon],
+    });
+    write_raw(dir, "invalid_layered_pack", &invalid)
+}
+
+/// Valid + single-fault-invalid `vr-decision-pack/v1` artifacts.
+///
+/// A `decision.v0` envelope whose support set has one replay-verified
+/// dependency plus the three committed-assumption kinds. The invalid variant
+/// applies one semantic mutation — the depended-on receipt is withheld — so the
+/// support-set walk marks that member `missing` and the pack is rejected.
+fn gen_decision_pack(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let depended = build_envelope(&json!({"step": "prior"}), 1000, None, "event")?;
+    let depended_canon = canon_string(&depended)?;
+    let depended_hash = get_hash(&depended)?;
+
+    let decision = build_envelope(
+        &json!({
+            "payload_kind": "decision.v0",
+            "verdict": {"kind": "allow"},
+            "support_set": [
+                {"member_kind": "cited_link", "id": "site", "url": "https://example.org/x"},
+                {"member_kind": "depended_on_receipt", "event_hash": depended_hash},
+                {"member_kind": "evidence_digest", "id": "dpa", "digest": "f".repeat(64)},
+                {"member_kind": "selector_value", "key": "content_length", "value": "10"}
+            ]
+        }),
+        1001,
+        None,
+        "event",
+    )?;
+    let decision_canon = canon_string(&decision)?;
+
+    let valid = json!({
+        "_format": "vr-decision-pack/v1",
+        "decision_canonical": decision_canon,
+        "depended_on": [depended_canon],
+    });
+    write_raw(dir, "valid_decision_pack", &valid)?;
+
+    let invalid = json!({
+        "_format": "vr-decision-pack/v1",
+        "decision_canonical": decision_canon,
+        "depended_on": [],
+    });
+    write_raw(dir, "invalid_decision_pack", &invalid)
+}
+
+/// Valid + single-fault-invalid `vr-layered-bundle/v1` (closure) artifacts.
+///
+/// Canonical graph: `pack.v0` → `model.v0` → `provider.v0`, with a closure
+/// manifest committing the dependency closure `{model, provider}` and the root
+/// pack committing the manifest digest. The invalid variant applies one
+/// semantic mutation — the provider receipt is withheld — so a committed
+/// closure node is unresolved and the transitive law rejects the bundle.
+fn gen_closure_bundle(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let provider = build_envelope(
+        &json!({
+            "payload_kind": "provider.v0",
+            "provider_id": "anthropic",
+            "support_set": [
+                {"member_kind": "evidence_digest", "id": "soc2", "digest": "f".repeat(64)}
+            ]
+        }),
+        1000,
+        None,
+        "event",
+    )?;
+    let provider_canon = canon_string(&provider)?;
+    let provider_hash = get_hash(&provider)?;
+
+    let model = build_layered_model(&provider_hash, "maker", "provider.v0")?;
+    let model_canon = canon_string(&model)?;
+    let model_hash = get_hash(&model)?;
+
+    // Closure manifest over the sorted dependency set; digest is BLAKE3(JCS)
+    // of the manifest body before the digest field is inserted.
+    let mut closure = vec![model_hash.clone(), provider_hash];
+    closure.sort();
+    let body = json!({
+        "schema": "vr.closure_manifest.v0",
+        "receipt_closure": closure,
+        "dependency_count": 2,
+    });
+    let manifest_digest = canon_hash(&body)?;
+    let mut manifest = body;
+    manifest["manifest_digest"] = json!(manifest_digest);
+
+    let pack = build_envelope(
+        &json!({
+            "payload_kind": "pack.v0",
+            "pack_id": "acme-deploy",
+            "closure_manifest_digest": manifest_digest,
+            "support_set": [{
+                "member_kind": "typed_receipt_dependency",
+                "event_hash": model_hash,
+                "relation": "depends_on",
+                "role": "host",
+                "target_schema": "model.v0"
+            }]
+        }),
+        1002,
+        None,
+        "event",
+    )?;
+    let pack_canon = canon_string(&pack)?;
+
+    let valid = json!({
+        "_format": "vr-layered-bundle/v1",
+        "root_canonical": pack_canon,
+        "manifest": manifest.clone(),
+        "receipts": [model_canon, provider_canon],
+    });
+    write_raw(dir, "valid_closure_bundle", &valid)?;
+
+    let invalid = json!({
+        "_format": "vr-layered-bundle/v1",
+        "root_canonical": pack_canon,
+        "manifest": manifest,
+        "receipts": [model_canon],
+    });
+    write_raw(dir, "invalid_closure_bundle", &invalid)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let dir = manifest_dir.join("test-vectors");
@@ -699,6 +892,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_invalid_wrong_digest_algorithm(&dir)?;
     gen_invalid_wrong_canonicalization(&dir)?;
     gen_invalid_schema_inconsistent(&dir)?;
+
+    // Layered-family pack vectors (ADR-040)
+    gen_layered_pack(&dir)?;
+    gen_decision_pack(&dir)?;
+    gen_closure_bundle(&dir)?;
 
     eprintln!("Done.");
     Ok(())
