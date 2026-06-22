@@ -1,0 +1,1 @@
+{"authority_set":{"keys":{"863f6c8abba37da850375c08":{"public_key_b64":"GX9rI+FshTLGq8g4+s1ep4m+DHaykgM0A5v6iz02jWE=","valid_from_epoch":0,"valid_until_epoch":null}},"revocations":{},"set_id":"test-authority"},"trust_policy":{"current_epoch":1,"enforce_epoch":true,"enforce_revocation":true}}

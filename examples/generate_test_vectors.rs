@@ -187,7 +187,56 @@ fn gen_valid_chain_3(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Er
         "data": chain
     });
 
-    write_vector(dir, "valid_chain_3", &vector)
+    write_vector(dir, "valid_chain_3", &vector)?;
+    // Raw array form consumed directly by `vr-verify chain`.
+    write_raw(dir, "valid_chain_3", &chain)
+}
+
+/// Trust-config fixtures for `vr-verify signed --trust <t.json>` (issue #3).
+///
+/// The file shape is `{ "authority_set": AuthoritySet, "trust_policy": TrustPolicy }`
+/// — both deserialize from the existing `vertrule_verifier::trust` serde types.
+/// Both configs are evaluated against the `valid_sig` signing key (seed
+/// `[42; 32]`): `trust_accept` lists that key as trusted in-epoch; `trust_deny`
+/// omits it, so trust evaluation returns `untrusted`.
+fn gen_trust_configs(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let seed: [u8; 32] = [42u8; 32];
+    let sk = SigningKey::from_bytes(&seed);
+    let pk = sk.verifying_key();
+    let kid = hex::encode(&blake3::hash(pk.as_bytes()).as_bytes()[..12]);
+    let pk_b64 = base64::engine::general_purpose::STANDARD.encode(pk.as_bytes());
+
+    let trust_policy = json!({
+        "current_epoch": 1,
+        "enforce_epoch": true,
+        "enforce_revocation": true,
+    });
+
+    let accept = json!({
+        "authority_set": {
+            "set_id": "test-authority",
+            "keys": {
+                kid: {
+                    "public_key_b64": pk_b64,
+                    "valid_from_epoch": 0,
+                    "valid_until_epoch": null,
+                }
+            },
+            "revocations": {},
+        },
+        "trust_policy": trust_policy,
+    });
+    write_raw(dir, "trust_accept", &accept)?;
+
+    let deny = json!({
+        "authority_set": {
+            "set_id": "test-authority",
+            "keys": {},
+            "revocations": {},
+        },
+        "trust_policy": trust_policy,
+    });
+    write_raw(dir, "trust_deny", &deny)
 }
 
 fn gen_valid_signed(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -929,6 +978,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // External-receipt (RBH) vectors (issue #2)
     gen_external_receipt(&dir)?;
+
+    // Trust-config vectors (issue #3)
+    gen_trust_configs(&dir)?;
 
     eprintln!("Done.");
     Ok(())

@@ -2,9 +2,9 @@
 //!
 //! Usage:
 //! ```text
-//! vr-verify receipt  <file.json>
-//! vr-verify chain    <chain.json>
-//! vr-verify signed   <file.json> <sig.json>
+//! vr-verify receipt  <file.json> [--max-bytes <N>]
+//! vr-verify chain    <chain.json> [--max-bytes <N>] [--max-chain-length <N>]
+//! vr-verify signed   <file.json> <sig.json> [--trust <trust.json>]
 //! vr-verify external <receipt.json>
 //! ```
 //!
@@ -16,17 +16,115 @@
 use std::process::ExitCode;
 
 use vertrule_verifier::result::VerificationStatus;
+use vertrule_verifier::VerifierLimits;
+
+/// CLI-only representation of the optional limit flags.
+///
+/// This is command-line syntax, not verifier-domain behavior: it records which
+/// limits the operator supplied and resolves omitted fields from
+/// [`VerifierLimits::default`]. An empty `LimitArgs` ([`LimitArgs::is_present`]
+/// is `false`) means "no flags given" and the caller stays on the existing
+/// default verification path.
+#[derive(Debug, Clone, Copy, Default)]
+struct LimitArgs {
+    max_bytes: Option<usize>,
+    max_chain_length: Option<usize>,
+}
+
+impl LimitArgs {
+    /// Whether any limit flag was supplied (selects the hardened verifier).
+    const fn is_present(self) -> bool {
+        self.max_bytes.is_some() || self.max_chain_length.is_some()
+    }
+
+    /// Resolve to concrete limits, taking unspecified fields from the default.
+    fn resolve(self) -> VerifierLimits {
+        let mut limits = VerifierLimits::default();
+        if let Some(max_bytes) = self.max_bytes {
+            limits.max_bytes = max_bytes;
+        }
+        if let Some(max_chain_length) = self.max_chain_length {
+            limits.max_chain_length = max_chain_length;
+        }
+        limits
+    }
+}
+
+/// Parse a non-zero `usize` flag value, rejecting `0` (zero never means
+/// "unlimited"; an explicit representation would be required for that).
+fn parse_limit_value(flag: &str, raw: &str) -> Result<usize, String> {
+    let value: usize = raw
+        .parse()
+        .map_err(|_| format!("{flag} expects a non-negative integer, got \"{raw}\""))?;
+    if value == 0 {
+        return Err(format!("{flag} must be greater than 0"));
+    }
+    Ok(value)
+}
+
+/// Parse trailing limit flags from `flags`.
+///
+/// `--max-chain-length` is only accepted when `allow_chain_length` is set
+/// (it is meaningless for single-receipt verification).
+fn parse_limit_args(flags: &[String], allow_chain_length: bool) -> Result<LimitArgs, String> {
+    let mut parsed = LimitArgs::default();
+    let mut iter = flags.iter();
+    while let Some(flag) = iter.next() {
+        match flag.as_str() {
+            "--max-bytes" => {
+                let raw = iter
+                    .next()
+                    .ok_or_else(|| "--max-bytes requires a value".to_string())?;
+                parsed.max_bytes = Some(parse_limit_value("--max-bytes", raw)?);
+            }
+            "--max-chain-length" if allow_chain_length => {
+                let raw = iter
+                    .next()
+                    .ok_or_else(|| "--max-chain-length requires a value".to_string())?;
+                parsed.max_chain_length = Some(parse_limit_value("--max-chain-length", raw)?);
+            }
+            other => return Err(format!("unexpected argument \"{other}\"")),
+        }
+    }
+    Ok(parsed)
+}
+
+/// Parse the optional `--trust <path>` flag for the `signed` subcommand.
+fn parse_trust_arg(flags: &[String]) -> Result<Option<String>, String> {
+    let mut trust = None;
+    let mut iter = flags.iter();
+    while let Some(flag) = iter.next() {
+        match flag.as_str() {
+            "--trust" => {
+                let path = iter
+                    .next()
+                    .ok_or_else(|| "--trust requires a path".to_string())?;
+                trust = Some(path.clone());
+            }
+            other => return Err(format!("unexpected argument \"{other}\"")),
+        }
+    }
+    Ok(trust)
+}
 
 const USAGE: &str = "\
 Usage:
-  vr-verify receipt <file.json>
-  vr-verify chain   <chain.json>
-  vr-verify signed  <file.json> <sig.json>
+  vr-verify receipt <file.json> [--max-bytes <N>]
+  vr-verify chain   <chain.json> [--max-bytes <N>] [--max-chain-length <N>]
+  vr-verify signed  <file.json> <sig.json> [--trust <trust.json>]
   vr-verify bundle  <bundle.json>
   vr-verify layered <pack.json>
   vr-verify decision <pack.json>
   vr-verify closure <bundle.json>
   vr-verify external <receipt.json>
+
+Options:
+  --max-bytes <N>         Reject input larger than N bytes (must be > 0).
+  --max-chain-length <N>  Reject chains with more than N envelopes (must be > 0).
+  --trust <trust.json>    Evaluate the signing key against an authority set and
+                          trust policy: {\"authority_set\": ..., \"trust_policy\": ...}.
+
+Omitting the limit/trust flags preserves the default verification behavior.
 
 Exit codes:
   0  VALID
@@ -44,29 +142,36 @@ fn main() -> ExitCode {
     let command = args[1].as_str();
 
     match command {
-        "receipt" => {
-            if args.len() != 3 {
-                eprintln!("Error: 'receipt' expects exactly one argument");
+        "receipt" => match parse_limit_args(&args[3..], false) {
+            Ok(limits) => run_receipt(&args[2], limits),
+            Err(e) => {
+                eprintln!("Error: {e}");
                 eprintln!("{USAGE}");
-                return ExitCode::from(2);
+                ExitCode::from(2)
             }
-            run_receipt(&args[2])
-        }
-        "chain" => {
-            if args.len() != 3 {
-                eprintln!("Error: 'chain' expects exactly one argument");
+        },
+        "chain" => match parse_limit_args(&args[3..], true) {
+            Ok(limits) => run_chain(&args[2], limits),
+            Err(e) => {
+                eprintln!("Error: {e}");
                 eprintln!("{USAGE}");
-                return ExitCode::from(2);
+                ExitCode::from(2)
             }
-            run_chain(&args[2])
-        }
+        },
         "signed" => {
-            if args.len() != 4 {
-                eprintln!("Error: 'signed' expects exactly two arguments");
+            if args.len() < 4 {
+                eprintln!("Error: 'signed' expects at least two arguments");
                 eprintln!("{USAGE}");
                 return ExitCode::from(2);
             }
-            run_signed(&args[2], &args[3])
+            match parse_trust_arg(&args[4..]) {
+                Ok(trust) => run_signed(&args[2], &args[3], trust.as_deref()),
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    eprintln!("{USAGE}");
+                    ExitCode::from(2)
+                }
+            }
         }
         "bundle" => {
             if args.len() != 3 {
@@ -116,7 +221,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_receipt(path: &str) -> ExitCode {
+fn run_receipt(path: &str, limits: LimitArgs) -> ExitCode {
     let raw_bytes = match std::fs::read(path) {
         Ok(b) => b,
         Err(e) => {
@@ -125,11 +230,15 @@ fn run_receipt(path: &str) -> ExitCode {
         }
     };
 
-    let result = vertrule_verifier::verify_receipt(&raw_bytes);
+    let result = if limits.is_present() {
+        vertrule_verifier::verify_receipt_with_limits(&raw_bytes, &limits.resolve())
+    } else {
+        vertrule_verifier::verify_receipt(&raw_bytes)
+    };
     emit_result(&result)
 }
 
-fn run_chain(path: &str) -> ExitCode {
+fn run_chain(path: &str, limits: LimitArgs) -> ExitCode {
     let raw_bytes = match std::fs::read(path) {
         Ok(b) => b,
         Err(e) => {
@@ -138,11 +247,15 @@ fn run_chain(path: &str) -> ExitCode {
         }
     };
 
-    let result = vertrule_verifier::verify_receipt_chain(&raw_bytes);
+    let result = if limits.is_present() {
+        vertrule_verifier::verify_receipt_chain_with_limits(&raw_bytes, &limits.resolve())
+    } else {
+        vertrule_verifier::verify_receipt_chain(&raw_bytes)
+    };
     emit_result(&result)
 }
 
-fn run_signed(receipt_path: &str, sig_path: &str) -> ExitCode {
+fn run_signed(receipt_path: &str, sig_path: &str, trust_path: Option<&str>) -> ExitCode {
     let raw_bytes = match std::fs::read(receipt_path) {
         Ok(b) => b,
         Err(e) => {
@@ -159,8 +272,51 @@ fn run_signed(receipt_path: &str, sig_path: &str) -> ExitCode {
         }
     };
 
-    let result = vertrule_verifier::verify_signed_receipt(&raw_bytes, &sig_bytes);
+    let result = match trust_path {
+        Some(path) => {
+            let (authority_set, trust_policy) = match load_trust_config(path) {
+                Ok(cfg) => cfg,
+                Err(e) => {
+                    eprintln!("Error loading trust config {path}: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            vertrule_verifier::verify_signed_receipt_with_trust(
+                &raw_bytes,
+                &sig_bytes,
+                &authority_set,
+                &trust_policy,
+            )
+        }
+        None => vertrule_verifier::verify_signed_receipt(&raw_bytes, &sig_bytes),
+    };
     emit_result(&result)
+}
+
+/// Load a trust config file shaped `{ "authority_set": ..., "trust_policy": ... }`.
+///
+/// Both members deserialize from the public `vertrule_verifier::trust` serde
+/// types; either may be omitted to fall back to its default.
+fn load_trust_config(
+    path: &str,
+) -> Result<
+    (
+        vertrule_verifier::AuthoritySet,
+        vertrule_verifier::TrustPolicy,
+    ),
+    String,
+> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let authority_set = match value.get("authority_set") {
+        Some(v) => serde_json::from_value(v.clone()).map_err(|e| e.to_string())?,
+        None => return Err("missing \"authority_set\"".to_string()),
+    };
+    let trust_policy = match value.get("trust_policy") {
+        Some(v) => serde_json::from_value(v.clone()).map_err(|e| e.to_string())?,
+        None => vertrule_verifier::TrustPolicy::default(),
+    };
+    Ok((authority_set, trust_policy))
 }
 
 fn run_bundle(path: &str) -> ExitCode {
