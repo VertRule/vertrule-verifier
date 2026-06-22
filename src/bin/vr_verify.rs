@@ -2,9 +2,10 @@
 //!
 //! Usage:
 //! ```text
-//! vr-verify receipt <file.json>
-//! vr-verify chain   <chain.json>
-//! vr-verify signed  <file.json> <sig.json>
+//! vr-verify receipt  <file.json>
+//! vr-verify chain    <chain.json>
+//! vr-verify signed   <file.json> <sig.json>
+//! vr-verify external <receipt.json>
 //! ```
 //!
 //! Exit codes:
@@ -25,6 +26,7 @@ Usage:
   vr-verify layered <pack.json>
   vr-verify decision <pack.json>
   vr-verify closure <bundle.json>
+  vr-verify external <receipt.json>
 
 Exit codes:
   0  VALID
@@ -97,6 +99,14 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             }
             run_closure(&args[2])
+        }
+        "external" => {
+            if args.len() != 3 {
+                eprintln!("Error: 'external' expects exactly one argument");
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+            run_external(&args[2])
         }
         _ => {
             eprintln!("Error: unknown command \"{command}\"");
@@ -274,6 +284,45 @@ fn run_closure(path: &str) -> ExitCode {
     match result.status {
         VerificationStatus::Valid => ExitCode::SUCCESS,
         VerificationStatus::Invalid => ExitCode::from(1),
+    }
+}
+
+fn run_external(path: &str) -> ExitCode {
+    let raw_bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Error reading {path}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+
+    match vertrule_verifier::verify_external_receipt(&raw_bytes) {
+        Ok(meta) => {
+            let json = match serde_json::to_vec(&meta) {
+                Ok(j) => j,
+                Err(e) => {
+                    eprintln!("Error serializing metadata: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            let canon = match vr_jcs::to_canon_bytes_from_slice(&json) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Error canonicalizing metadata: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &canon) {
+                eprintln!("Error writing result: {e}");
+                return ExitCode::from(2);
+            }
+            let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\n");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
     }
 }
 

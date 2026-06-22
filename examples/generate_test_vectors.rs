@@ -863,6 +863,35 @@ fn gen_closure_bundle(dir: &std::path::Path) -> Result<(), Box<dyn std::error::E
     write_raw(dir, "invalid_closure_bundle", &invalid)
 }
 
+/// Valid + single-fault-invalid external-receipt (RBH) fixtures.
+///
+/// Drives `vr-verify external` (envelope-only `verify_external_receipt`). The
+/// valid variant is a single-law `governance` envelope under the constitutional
+/// full-envelope commitment (`event_hash = BLAKE3(JCS(envelope \ {event_hash}))`).
+/// The invalid variant applies one semantic mutation — the last hex digit of
+/// `event_hash` is flipped — so the envelope-only law rejects it
+/// (`EventHashMismatch`).
+fn gen_external_receipt(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let payload = json!({
+        "domain": "test.rbh.v1",
+        "capability_type": "write",
+        "scope": "engine.mutation"
+    });
+
+    let valid = build_envelope(&payload, 1000, None, "governance")?;
+    write_raw(dir, "valid_external_receipt", &valid)?;
+
+    let mut invalid = valid;
+    let good_hash = get_hash(&invalid)?;
+    let tampered = format!(
+        "{}{}",
+        &good_hash[..63],
+        if good_hash.ends_with('0') { "1" } else { "0" }
+    );
+    invalid["event_hash"] = json!(tampered);
+    write_raw(dir, "invalid_external_receipt", &invalid)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let dir = manifest_dir.join("test-vectors");
@@ -897,6 +926,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_layered_pack(&dir)?;
     gen_decision_pack(&dir)?;
     gen_closure_bundle(&dir)?;
+
+    // External-receipt (RBH) vectors (issue #2)
+    gen_external_receipt(&dir)?;
 
     eprintln!("Done.");
     Ok(())
