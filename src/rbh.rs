@@ -65,6 +65,15 @@ pub enum ReceiptVerifyError {
     /// Envelope-commitment canonicalization failed.
     #[error("envelope commitment failed: {0}")]
     CommitmentError(String),
+
+    /// A payload claims to be a decode-step receipt at a non-canonical schema
+    /// version. Only `vr.operator_stream.decode_step@0.2` is a canonical decode
+    /// claim (ADR-0006); `@0.1` is content-digest-only with no envelope identity.
+    #[error("non-canonical decode-step schema: {schema} (only @0.2 is a canonical decode claim)")]
+    NonCanonicalDecodeStep {
+        /// The rejected decode-step schema string.
+        schema: String,
+    },
 }
 
 /// Verify the supported receipt-envelope version.
@@ -148,6 +157,34 @@ fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyErro
     }
 }
 
+/// Canonical decode-step payload schema (ADR-0006).
+const CANONICAL_DECODE_STEP_SCHEMA: &str = "vr.operator_stream.decode_step@0.2";
+/// Prefix shared by all decode-step payload schema versions.
+const DECODE_STEP_SCHEMA_PREFIX: &str = "vr.operator_stream.decode_step@";
+
+/// Reject a payload that claims to be a decode-step receipt at any version other
+/// than the canonical `@0.2` (ADR-0006).
+///
+/// `@0.1` is content-digest-only with no envelope identity and is therefore not a
+/// canonical decode claim. Payloads that carry no decode-step schema tag pass through
+/// unaffected — this guard only fires when a payload asserts the decode-step schema.
+fn verify_decode_step_schema(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyError> {
+    let Some(schema) = envelope
+        .payload
+        .as_value()
+        .get("schema")
+        .and_then(serde_json::Value::as_str)
+    else {
+        return Ok(());
+    };
+    if schema.starts_with(DECODE_STEP_SCHEMA_PREFIX) && schema != CANONICAL_DECODE_STEP_SCHEMA {
+        return Err(ReceiptVerifyError::NonCanonicalDecodeStep {
+            schema: schema.to_string(),
+        });
+    }
+    Ok(())
+}
+
 /// Structurally verify an external receipt and extract metadata.
 ///
 /// Called at host boundary before policy evaluation.
@@ -179,6 +216,8 @@ pub fn verify_external_receipt(
     verify_envelope_version(&envelope)?;
 
     verify_event_hash(&envelope)?;
+
+    verify_decode_step_schema(&envelope)?;
 
     Ok(VerifiedReceiptMetadata::new(
         envelope.context_digest.to_hex(),

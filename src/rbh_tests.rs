@@ -236,3 +236,72 @@ fn legacy_single_law_receipt_still_accepted() -> Result<(), anyhow::Error> {
     assert_eq!(meta.receipt_type(), "Llm");
     Ok(())
 }
+
+// ── Decode-step canonical-schema admission (ADR-0006) ────────────────────
+
+fn decode_step_payload(schema: &str) -> Value {
+    json!({
+        "schema": schema,
+        "step_index": 0,
+        "step_output_digest": "abc",
+    })
+}
+
+#[test]
+fn decode_step_v02_constitutional_accepts() -> Result<(), anyhow::Error> {
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.2");
+    let skeleton = envelope_skeleton(1, "llm", 1, Some("engine"), None, &payload)?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+
+    let meta = verify_external_receipt(&bytes)?;
+    assert_eq!(meta.receipt_type(), "Llm");
+    Ok(())
+}
+
+#[test]
+fn decode_step_v01_rejected_as_non_canonical() -> Result<(), anyhow::Error> {
+    // @0.1 carries a valid constitutional event_hash, so it passes the hash check;
+    // it must still be rejected as a non-canonical decode claim.
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.1");
+    let skeleton = envelope_skeleton(1, "llm", 1, Some("engine"), None, &payload)?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+
+    let result = verify_external_receipt(&bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::NonCanonicalDecodeStep { .. })
+        ),
+        "decode_step@0.1 must be rejected as non-canonical, got {result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn decode_step_under_runtime_port_profile_rejected() -> Result<(), anyhow::Error> {
+    // A decode-step envelope declaring the runtime-port profile must be refused
+    // (decode_step is constitutional only); proves the fail-closed profile mapping.
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.2");
+    let skeleton = envelope_skeleton(
+        1,
+        "llm",
+        1,
+        None,
+        Some("runtime_port_event_preimage_v1"),
+        &payload,
+    )?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+
+    let result = verify_external_receipt(&bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::ProfileNotEnvelopeVerifiable { .. })
+        ),
+        "decode_step@0.2 declaring runtime_port must be rejected, got {result:?}"
+    );
+    Ok(())
+}
