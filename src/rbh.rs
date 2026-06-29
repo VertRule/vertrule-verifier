@@ -11,6 +11,7 @@
 //! (`vr_app::validate_authorization_request`) remains in the policy
 //! substrate.
 
+use serde_json::Value;
 use thiserror::Error;
 use vertrule_schemas::{EventHashProfileId, ReceiptEnvelope, ReceiptType, SchemaVersion};
 use vr_receipt_identity::compute_event_hash;
@@ -65,6 +66,37 @@ pub enum ReceiptVerifyError {
     /// Envelope-commitment canonicalization failed.
     #[error("envelope commitment failed: {0}")]
     CommitmentError(String),
+
+    /// A payload claims to be a decode-step receipt at a non-canonical schema
+    /// version. Only `vr.operator_stream.decode_step@0.2` is a canonical decode
+    /// claim (ADR-0006); `@0.1` is content-digest-only with no envelope identity.
+    #[error("non-canonical decode-step schema: {schema} (only @0.2 is a canonical decode claim)")]
+    NonCanonicalDecodeStep {
+        /// The rejected decode-step schema string.
+        schema: String,
+    },
+
+    /// A projection receipt omits a required source-binding field. A projection
+    /// (H0–H3 / browser) must bind all five fields (ADR-0006); a missing one is
+    /// not a valid canonical-decode citation.
+    #[error("projection missing source binding: {field}")]
+    ProjectionMissingSourceBinding {
+        /// The absent binding field name.
+        field: &'static str,
+    },
+
+    /// A projection's source-bound field disagrees with the cited canonical
+    /// envelope. The projection cites a different receipt class, schema, or event
+    /// than the envelope it claims to project (ADR-0006); fail closed.
+    #[error("projection source mismatch on {field}: expected {expected}, actual {actual}")]
+    ProjectionSourceMismatch {
+        /// The binding field that disagreed.
+        field: &'static str,
+        /// The cited envelope's value.
+        expected: String,
+        /// The projection's declared value.
+        actual: String,
+    },
 }
 
 /// Verify the supported receipt-envelope version.
@@ -148,6 +180,122 @@ fn verify_event_hash(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyErro
     }
 }
 
+/// Canonical decode-step payload schema (ADR-0006).
+const CANONICAL_DECODE_STEP_SCHEMA: &str = "vr.operator_stream.decode_step@0.2";
+/// Prefix shared by all decode-step payload schema versions.
+const DECODE_STEP_SCHEMA_PREFIX: &str = "vr.operator_stream.decode_step@";
+
+/// Reject a payload that claims to be a decode-step receipt at any version other
+/// than the canonical `@0.2` (ADR-0006).
+///
+/// `@0.1` is content-digest-only with no envelope identity and is therefore not a
+/// canonical decode claim. Payloads that carry no decode-step schema tag pass through
+/// unaffected — this guard only fires when a payload asserts the decode-step schema.
+fn verify_decode_step_schema(envelope: &ReceiptEnvelope) -> Result<(), ReceiptVerifyError> {
+    let Some(schema) = envelope
+        .payload
+        .as_value()
+        .get("schema")
+        .and_then(serde_json::Value::as_str)
+    else {
+        return Ok(());
+    };
+    if schema.starts_with(DECODE_STEP_SCHEMA_PREFIX) && schema != CANONICAL_DECODE_STEP_SCHEMA {
+        return Err(ReceiptVerifyError::NonCanonicalDecodeStep {
+            schema: schema.to_string(),
+        });
+    }
+    Ok(())
+}
+
+/// The five fields a projection must bind to its cited canonical envelope
+/// (ADR-0006 *Projection commits to source*). The first three are bound to the
+/// envelope and compared against it; the last two are projection-declared and
+/// only asserted present.
+const PROJECTION_SOURCE_FIELDS: [&str; 5] = [
+    "source_receipt_type",
+    "source_schema_version",
+    "source_event_hash",
+    "projection_law_id",
+    "omitted_evidence_classes",
+];
+
+/// Assert a projection's source-bound field equals the cited envelope value.
+///
+/// Comparison is on the envelope's own serialized JSON string (e.g. `receipt_type`
+/// `"llm"`, the payload `schema`, the `event_hash` hex), so it is
+/// representation-consistent with what the projection author cited.
+fn assert_projection_bind(
+    projection: &Value,
+    field: &'static str,
+    expected: Option<&Value>,
+) -> Result<(), ReceiptVerifyError> {
+    let expected = expected.and_then(Value::as_str).unwrap_or_default();
+    let actual = projection
+        .get(field)
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(ReceiptVerifyError::ProjectionSourceMismatch {
+            field,
+            expected: expected.to_string(),
+            actual: actual.to_string(),
+        })
+    }
+}
+
+/// Verify a projection receipt against the canonical decode-step envelope it cites.
+///
+/// A projection (H0–H3 `InferenceReceipt`, `BrowserDecodeStepReceipt`) carries no
+/// authoritative event identity of its own (ADR-0006); its transport digest is
+/// non-authoritative for decode semantics. It must bind **five** fields to its
+/// source. Three of them — `source_receipt_type`, `source_schema_version`,
+/// `source_event_hash` — are bound to the cited canonical envelope and must agree
+/// with it; the other two (`projection_law_id`, `omitted_evidence_classes`) are
+/// projection-declared and asserted present. The canonical envelope is verified in
+/// full first via [`verify_external_receipt`], so a projection is never trusted
+/// above an unverified source.
+///
+/// # Errors
+///
+/// Returns [`ReceiptVerifyError`] if the cited envelope fails verification, either
+/// document fails to parse, any of the five binding fields is absent, or a
+/// source-bound field disagrees with the cited envelope (fail-closed).
+pub fn verify_projection_source(
+    projection_bytes: &[u8],
+    canonical_envelope_bytes: &[u8],
+) -> Result<VerifiedReceiptMetadata, ReceiptVerifyError> {
+    // The cited source must itself verify (event_hash law + decode-step schema).
+    let meta = verify_external_receipt(canonical_envelope_bytes)?;
+
+    let envelope: Value = serde_json::from_slice(canonical_envelope_bytes)
+        .map_err(|e| ReceiptVerifyError::ParseError(e.to_string()))?;
+    let projection: Value = serde_json::from_slice(projection_bytes)
+        .map_err(|e| ReceiptVerifyError::ParseError(e.to_string()))?;
+
+    for field in PROJECTION_SOURCE_FIELDS {
+        if projection.get(field).is_none() {
+            return Err(ReceiptVerifyError::ProjectionMissingSourceBinding { field });
+        }
+    }
+
+    assert_projection_bind(
+        &projection,
+        "source_receipt_type",
+        envelope.get("receipt_type"),
+    )?;
+    assert_projection_bind(
+        &projection,
+        "source_schema_version",
+        envelope.get("payload").and_then(|p| p.get("schema")),
+    )?;
+    assert_projection_bind(&projection, "source_event_hash", envelope.get("event_hash"))?;
+
+    Ok(meta)
+}
+
 /// Structurally verify an external receipt and extract metadata.
 ///
 /// Called at host boundary before policy evaluation.
@@ -179,6 +327,8 @@ pub fn verify_external_receipt(
     verify_envelope_version(&envelope)?;
 
     verify_event_hash(&envelope)?;
+
+    verify_decode_step_schema(&envelope)?;
 
     Ok(VerifiedReceiptMetadata::new(
         envelope.context_digest.to_hex(),

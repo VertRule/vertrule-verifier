@@ -1,4 +1,4 @@
-use super::{verify_external_receipt, ReceiptVerifyError};
+use super::{verify_external_receipt, verify_projection_source, ReceiptVerifyError};
 use serde_json::{json, Value};
 use vertrule_schemas::DigestBytes;
 
@@ -234,5 +234,176 @@ fn legacy_single_law_receipt_still_accepted() -> Result<(), anyhow::Error> {
 
     let meta = verify_external_receipt(&bytes)?;
     assert_eq!(meta.receipt_type(), "Llm");
+    Ok(())
+}
+
+// ── Decode-step canonical-schema admission (ADR-0006) ────────────────────
+
+fn decode_step_payload(schema: &str) -> Value {
+    json!({
+        "schema": schema,
+        "step_index": 0,
+        "step_output_digest": "abc",
+    })
+}
+
+#[test]
+fn decode_step_v02_constitutional_accepts() -> Result<(), anyhow::Error> {
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.2");
+    let skeleton = envelope_skeleton(1, "llm", 1, Some("engine"), None, &payload)?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+
+    let meta = verify_external_receipt(&bytes)?;
+    assert_eq!(meta.receipt_type(), "Llm");
+    Ok(())
+}
+
+#[test]
+fn decode_step_v01_rejected_as_non_canonical() -> Result<(), anyhow::Error> {
+    // @0.1 carries a valid constitutional event_hash, so it passes the hash check;
+    // it must still be rejected as a non-canonical decode claim.
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.1");
+    let skeleton = envelope_skeleton(1, "llm", 1, Some("engine"), None, &payload)?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+
+    let result = verify_external_receipt(&bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::NonCanonicalDecodeStep { .. })
+        ),
+        "decode_step@0.1 must be rejected as non-canonical, got {result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn decode_step_under_runtime_port_profile_rejected() -> Result<(), anyhow::Error> {
+    // A decode-step envelope declaring the runtime-port profile must be refused
+    // (decode_step is constitutional only); proves the fail-closed profile mapping.
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.2");
+    let skeleton = envelope_skeleton(
+        1,
+        "llm",
+        1,
+        None,
+        Some("runtime_port_event_preimage_v1"),
+        &payload,
+    )?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+
+    let result = verify_external_receipt(&bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::ProfileNotEnvelopeVerifiable { .. })
+        ),
+        "decode_step@0.2 declaring runtime_port must be rejected, got {result:?}"
+    );
+    Ok(())
+}
+
+// ── Projection source binding (ADR-0006) ─────────────────────────────────
+
+/// Build a valid canonical `decode_step@0.2` envelope; return its bytes and the
+/// hex `event_hash` a projection must cite.
+fn canonical_decode_step_envelope() -> Result<(Vec<u8>, String), anyhow::Error> {
+    let payload = decode_step_payload("vr.operator_stream.decode_step@0.2");
+    let skeleton = envelope_skeleton(1, "llm", 1, Some("engine"), None, &payload)?;
+    let event_hash = constitutional_event_hash(&skeleton)?;
+    let bytes = receipt_bytes(&skeleton, &event_hash)?;
+    Ok((bytes, event_hash.to_hex()))
+}
+
+/// A projection that cites the canonical envelope, carrying all five binding
+/// fields with the three source-bound ones agreeing with the envelope.
+fn projection_citing(event_hash_hex: &str) -> Value {
+    json!({
+        "schema": "vr.browser.decode_step@0.2",
+        "source_receipt_type": "llm",
+        "source_schema_version": "vr.operator_stream.decode_step@0.2",
+        "source_event_hash": event_hash_hex,
+        "projection_law_id": "vr/browser/decode-step/v2",
+        "omitted_evidence_classes": ["sampling", "trace"],
+    })
+}
+
+#[test]
+fn projection_with_matching_source_accepts() -> Result<(), anyhow::Error> {
+    let (envelope_bytes, event_hash) = canonical_decode_step_envelope()?;
+    let projection_bytes = serde_json::to_vec(&projection_citing(&event_hash))?;
+    verify_projection_source(&projection_bytes, &envelope_bytes)?;
+    Ok(())
+}
+
+#[test]
+fn projection_source_event_hash_mismatch_rejected() -> Result<(), anyhow::Error> {
+    // Citing the wrong canonical event_hash must fail closed — the projection
+    // claims to project a step it does not.
+    let (envelope_bytes, _event_hash) = canonical_decode_step_envelope()?;
+    let wrong = DigestBytes::from_array([0x77; 32]).to_hex();
+    let projection_bytes = serde_json::to_vec(&projection_citing(&wrong))?;
+
+    let result = verify_projection_source(&projection_bytes, &envelope_bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::ProjectionSourceMismatch {
+                field: "source_event_hash",
+                ..
+            })
+        ),
+        "projection citing wrong source_event_hash must reject, got {result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn projection_source_type_mismatch_rejected() -> Result<(), anyhow::Error> {
+    // `source_event_hash` alone is insufficient: citing the wrong receipt class
+    // (here `governance` against an `llm` decode step) must also fail closed.
+    let (envelope_bytes, event_hash) = canonical_decode_step_envelope()?;
+    let mut projection = projection_citing(&event_hash);
+    projection["source_receipt_type"] = json!("governance");
+    let projection_bytes = serde_json::to_vec(&projection)?;
+
+    let result = verify_projection_source(&projection_bytes, &envelope_bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::ProjectionSourceMismatch {
+                field: "source_receipt_type",
+                ..
+            })
+        ),
+        "projection citing wrong source_receipt_type must reject, got {result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn projection_missing_binding_rejected() -> Result<(), anyhow::Error> {
+    // All five fields are required; dropping a projection-declared one fails closed.
+    let (envelope_bytes, event_hash) = canonical_decode_step_envelope()?;
+    let mut projection = projection_citing(&event_hash);
+    projection
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!("projection is not a JSON object"))?
+        .remove("projection_law_id");
+    let projection_bytes = serde_json::to_vec(&projection)?;
+
+    let result = verify_projection_source(&projection_bytes, &envelope_bytes);
+    assert!(
+        matches!(
+            result,
+            Err(ReceiptVerifyError::ProjectionMissingSourceBinding {
+                field: "projection_law_id"
+            })
+        ),
+        "projection missing a binding field must reject, got {result:?}"
+    );
     Ok(())
 }
