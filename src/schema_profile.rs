@@ -31,6 +31,11 @@ const OPTIONAL_ENVELOPE_FIELDS: &[&str] = &[
 ];
 
 /// Known `receipt_type` values (canonical lowercase only).
+///
+/// This is the PUBLIC verifier acceptance set. The SEK-0 lifecycle
+/// discriminators (`operation`, `finalization`, `abort`) are internal-only:
+/// they are validated through the `sek_receipt_digest_v1` schema surface,
+/// never by public envelope acceptance (ADR-029 §non-goals).
 const KNOWN_RECEIPT_TYPES: &[&str] = &[
     "event",
     "llm",
@@ -39,9 +44,6 @@ const KNOWN_RECEIPT_TYPES: &[&str] = &[
     "adapter",
     "projection",
     "training",
-    "operation",
-    "finalization",
-    "abort",
 ];
 
 /// Known `boundary_origin` values (canonical lowercase only).

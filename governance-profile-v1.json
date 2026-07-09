@@ -32,7 +32,7 @@
       { "name": "event_hash_profile", "type": "string", "description": "Digest-law profile id selecting the event_hash law (ADR-029); required on multi-law receipt_type 'event'" }
     ]
   },
-  "known_receipt_types": ["event", "llm", "mri", "governance", "adapter", "projection", "training", "operation", "finalization", "abort"],
+  "known_receipt_types": ["event", "llm", "mri", "governance", "adapter", "projection", "training"],
   "known_boundary_origins": ["engine", "adapter", "numeric", "governance", "model", "training"],
   "discriminator_case": "lowercase_only",
   "structural_integer_fields": ["envelope_version", "logical_time"],

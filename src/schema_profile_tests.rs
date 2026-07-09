@@ -189,6 +189,60 @@ vr_test!(
 );
 
 vr_test!(
+    fn test_internal_only_operation_rejected() {
+        // SEK-0 lifecycle discriminator: internal-only, never publicly
+        // accepted (ADR-029 §non-goals).
+        let mut json = valid_envelope_json();
+        json["receipt_type"] = serde_json::json!("operation");
+        let Err(err) = validate_envelope_schema(&json) else {
+            anyhow::bail!("expected rejection for internal-only receipt_type \"operation\"")
+        };
+        match err {
+            VerifyError::UnknownReceiptType { value } => {
+                assert_eq!(value, "operation");
+            }
+            other => anyhow::bail!("expected UnknownReceiptType, got: {other}"),
+        }
+    }
+);
+
+vr_test!(
+    fn test_internal_only_finalization_rejected() {
+        // SEK-0 lifecycle discriminator: internal-only, never publicly
+        // accepted (ADR-029 §non-goals).
+        let mut json = valid_envelope_json();
+        json["receipt_type"] = serde_json::json!("finalization");
+        let Err(err) = validate_envelope_schema(&json) else {
+            anyhow::bail!("expected rejection for internal-only receipt_type \"finalization\"")
+        };
+        match err {
+            VerifyError::UnknownReceiptType { value } => {
+                assert_eq!(value, "finalization");
+            }
+            other => anyhow::bail!("expected UnknownReceiptType, got: {other}"),
+        }
+    }
+);
+
+vr_test!(
+    fn test_internal_only_abort_rejected() {
+        // SEK-0 lifecycle discriminator: internal-only, never publicly
+        // accepted (ADR-029 §non-goals).
+        let mut json = valid_envelope_json();
+        json["receipt_type"] = serde_json::json!("abort");
+        let Err(err) = validate_envelope_schema(&json) else {
+            anyhow::bail!("expected rejection for internal-only receipt_type \"abort\"")
+        };
+        match err {
+            VerifyError::UnknownReceiptType { value } => {
+                assert_eq!(value, "abort");
+            }
+            other => anyhow::bail!("expected UnknownReceiptType, got: {other}"),
+        }
+    }
+);
+
+vr_test!(
     fn test_all_boundary_origins_accepted() {
         let origins = [
             "engine",
@@ -208,8 +262,11 @@ vr_test!(
 
 vr_test!(
     fn test_receipt_types_match_schema_crate() {
-        // Guard against drift: every ReceiptType variant in vertrule-schemas must
-        // be in KNOWN_RECEIPT_TYPES, and the counts must match.
+        // Guard against drift: the vertrule-schemas ReceiptType variants split
+        // exactly into the public acceptance set (KNOWN_RECEIPT_TYPES) and the
+        // internal-only SEK-0 lifecycle discriminators. The internal-only set
+        // must never enter public envelope acceptance; SEK receipts are
+        // validated via the sek_receipt_digest_v1 surface (ADR-029 §non-goals).
         let schema_types = [
             vertrule_schemas::ReceiptType::Event,
             vertrule_schemas::ReceiptType::Llm,
@@ -222,18 +279,27 @@ vr_test!(
             vertrule_schemas::ReceiptType::Finalization,
             vertrule_schemas::ReceiptType::Abort,
         ];
-        if schema_types.len() != super::KNOWN_RECEIPT_TYPES.len() {
+        let internal_only = ["operation", "finalization", "abort"];
+        if schema_types.len() != super::KNOWN_RECEIPT_TYPES.len() + internal_only.len() {
             anyhow::bail!(
-                "ReceiptType variant count ({}) != KNOWN_RECEIPT_TYPES count ({})",
+                "ReceiptType variant count ({}) != public ({}) + internal-only ({})",
                 schema_types.len(),
                 super::KNOWN_RECEIPT_TYPES.len(),
+                internal_only.len(),
             );
         }
         for variant in &schema_types {
             let name = format!("{variant}");
-            if !super::KNOWN_RECEIPT_TYPES.contains(&name.as_str()) {
+            let public = super::KNOWN_RECEIPT_TYPES.contains(&name.as_str());
+            let internal = internal_only.contains(&name.as_str());
+            if public && internal {
                 anyhow::bail!(
-                    "ReceiptType::{variant:?} (serializes as \"{name}\") not in KNOWN_RECEIPT_TYPES"
+                    "ReceiptType::{variant:?} (\"{name}\") is both public and internal-only"
+                );
+            }
+            if !public && !internal {
+                anyhow::bail!(
+                    "ReceiptType::{variant:?} (\"{name}\") is in neither KNOWN_RECEIPT_TYPES nor the internal-only set"
                 );
             }
         }
