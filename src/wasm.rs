@@ -156,11 +156,12 @@ pub fn verify_closure_bundle_json(bundle_json: &str) -> String {
 #[must_use]
 #[wasm_bindgen]
 pub fn digest_hex(input: &[u8]) -> String {
-    // As of Gate 2 (JCS Consumer Hardening Plan), routes through the
-    // sealed `GenericByteDigest`. The input is treated as opaque binary
-    // bytes — not canonical JSON. The WASM-facing return shape (lowercase
-    // hex) is preserved.
-    crate::identity::GenericByteDigest::from_bytes(input).to_hex_string()
+    // Opaque binary bytes, not canonical JSON — so the `vr-jcs` canonical
+    // path does not apply. This function identifies nothing: it exports the
+    // BLAKE3 primitive for client-side display, so the sealed primitive
+    // carrier is the accurate expression rather than a placeholder. The
+    // WASM-facing return shape (64-char lowercase hex) is unchanged.
+    vertrule_crypto::identity::OpaqueBytesDigest::compute(input).to_hex_string()
 }
 
 /// Return the verifier's schema profile version.
@@ -295,9 +296,11 @@ mod tests {
         let pk = sk.verifying_key();
         let pk_b64 =
             base64::Engine::encode(&base64::engine::general_purpose::STANDARD, pk.as_bytes());
-        // Key fingerprint via sealed GenericByteDigest (binary identity).
-        let pk_hash = crate::identity::GenericByteDigest::from_bytes(pk.as_bytes());
-        let key_id = hex::encode(&pk_hash.bytes()[..12]);
+        // Key fingerprint through the ratified V1 law rather than
+        // hand-reproducing `hex(BLAKE3(pk)[..12])`.
+        let key_id = crate::signature::KeyId::from_public_key_v1(pk.as_bytes())
+            .as_hex()
+            .to_string();
         let sig_b64 =
             base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &[0u8; 64]);
         let bundle = serde_json::json!({

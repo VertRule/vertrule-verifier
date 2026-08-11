@@ -30,7 +30,7 @@ fn build_envelope(payload: serde_json::Value) -> anyhow::Result<(String, String)
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     // Sealed constructor (byte-identical to raw BLAKE3 over the canonical
     // bytes) — keeps the raw-BLAKE3 taxonomy guard's zero-site invariant.
-    let hash_hex = crate::identity::GenericByteDigest::from_bytes(&canon_bytes).to_hex_string();
+    let hash_hex = blake3::hash(&canon_bytes).to_hex().to_string();
     obj.insert("event_hash".to_string(), serde_json::json!(hash_hex));
     let canonical = crate::canon::typed_canon_string(&serde_json::Value::Object(obj))
         .map_err(|e| anyhow::anyhow!("{e}"))?;

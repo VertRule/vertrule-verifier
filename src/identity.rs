@@ -87,49 +87,21 @@ impl SidecarDigest {
     }
 }
 
-// ── GenericByteDigest ────────────────────────────────────────────
-// Binary identity: BLAKE3 over arbitrary input bytes, NOT JCS.
-
-/// Sealed binary-identity digest: `BLAKE3(input_bytes)`.
-///
-/// Used for inputs that are **not** canonical JSON — e.g. a public key
-/// fingerprint, an arbitrary byte blob exposed to a WASM/JS caller. The
-/// input bytes are the canonical representation; there is no JSON shape
-/// to canonicalize.
-///
-/// Per the JCS Consumer Hardening Plan's three-class identity model,
-/// binary-payload identity is a legitimate non-JCS digest contract.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GenericByteDigest {
-    bytes: [u8; 32],
-}
-
-impl GenericByteDigest {
-    /// Compute `BLAKE3(input)` for arbitrary input bytes.
-    ///
-    /// # ALLOW-JCS-BYPASS
-    ///
-    /// Binary payload identity, not canonical JSON identity.
-    #[must_use]
-    pub fn from_bytes(input: &[u8]) -> Self {
-        // ALLOW-JCS-BYPASS: binary payload digest, not canonical JSON identity
-        Self {
-            bytes: *blake3::hash(input).as_bytes(),
-        }
-    }
-
-    /// Borrow the raw digest bytes.
-    #[must_use]
-    pub const fn bytes(&self) -> &[u8; 32] {
-        &self.bytes
-    }
-
-    /// Lowercase-hex string form.
-    #[must_use]
-    pub fn to_hex_string(&self) -> String {
-        hex::encode(self.bytes)
-    }
-}
+// ADR-047 (2026-08-11): `GenericByteDigest` was deleted here. It was a public
+// factory of shape `f(arbitrary bytes) -> digest` with no domain, serving two
+// unrelated meanings from one anonymous law — a canonical-JSON manifest
+// identity and a WASM display utility. Same primitive law is not the same
+// identity domain.
+//
+// Each caller now uses the surface matching what its value actually is:
+//   canonical-JSON digest  -> `digest_trusted_value` + `vr_jcs::CanonicalDigest`
+//                             (the path `SidecarDigest` already used)
+//   arbitrary opaque bytes -> `vertrule_crypto::identity::OpaqueBytesDigest`
+//
+// No replacement type was introduced: the repository already had a canonical
+// digest abstraction whose law matched exactly. Nothing external named this
+// type — only its lowercase-hex `String` crossed the WASM ABI, so the Rust type
+// disappeared with the wire byte-identical.
 
 #[cfg(test)]
 #[path = "identity_tests.rs"]

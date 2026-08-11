@@ -37,8 +37,6 @@ wasm = ["wasm-bindgen"]
 [dependencies]
 base64 = "0.22"
 vertrule-crypto = { path = "../vertrule-runtime/crates/vertrule-crypto" }
-# Sites 4/5 + result.rs pending ratification; see EDGE_CENSUS.
-blake3 = "1"
 ed25519-dalek = "2"
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }

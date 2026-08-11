@@ -267,9 +267,16 @@ fn check_manifest_digest(
         .and_then(serde_json::Value::as_str);
     let mut body = obj.clone();
     body.remove("manifest_digest");
-    let recomputed = crate::canon::typed_canon_bytes(&serde_json::Value::Object(body))
-        .ok()
-        .map(|b| crate::identity::GenericByteDigest::from_bytes(&b).to_hex_string());
+    // `BLAKE3(JCS(value))` — the canonical-JSON digest path the crate already
+    // uses for `SidecarDigest::recompute_from_value`. `digest_trusted_value`
+    // canonicalizes and digests in one sealed step via `vr-jcs`, so this needs
+    // no separate canonicalization and mints no new identity type.
+    let recomputed = crate::canonical_identity::digest_trusted_value(
+        &serde_json::Value::Object(body),
+        &vr_jcs::DigestStrategy::blake3_untagged(),
+    )
+    .ok()
+    .map(|digest| hex::encode(&digest.bytes));
 
     let mut ok = true;
     match (recomputed.as_deref(), stated) {
