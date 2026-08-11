@@ -179,8 +179,10 @@ impl VerificationResult {
     pub fn digest(&self) -> Result<DigestBytes, VerifyError> {
         let value = serde_json::to_value(self).map_err(|e| VerifyError::Canon(e.to_string()))?;
         let canon_bytes = crate::canon::typed_canon_bytes(&value)?;
-        let hash = blake3::hash(&canon_bytes);
-        Ok(DigestBytes::from_array(*hash.as_bytes()))
+        // Law: BLAKE3(JCS(self)). Derivation authority sealed 2026-08-11;
+        // byte-neutral, pinned by the batch equivalence vectors.
+        let digest = vertrule_crypto::identity::OpaqueBytesDigest::compute(&canon_bytes);
+        Ok(DigestBytes::from_array(*digest.bytes()))
     }
 
     /// Serialize this result to JCS-canonical JSON bytes.

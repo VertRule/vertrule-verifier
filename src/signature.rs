@@ -164,12 +164,15 @@ pub fn compute_receipt_digest(
     }
     let canon_bytes = crate::canon::typed_canon_bytes(&value)?;
 
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(RECEIPT_PREFIX);
-    hasher.update(&canon_bytes);
-    let hash = hasher.finalize();
+    // Law: BLAKE3(RECEIPT_PREFIX ‖ canonical bytes). `RECEIPT_PREFIX` is
+    // `&'static`, so the domain is declared rather than caller-supplied —
+    // which is what makes the sealed constructor applicable. Byte-neutral.
+    let digest = vertrule_crypto::identity::VrPrefixedCanonicalDigest::from_pre_canonicalized_bytes(
+        RECEIPT_PREFIX,
+        &canon_bytes,
+    );
 
-    Ok(DigestBytes::from_array(*hash.as_bytes()))
+    Ok(DigestBytes::from_array(*digest.bytes()))
 }
 
 /// Verify an Ed25519 signature over a receipt payload.

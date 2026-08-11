@@ -36,6 +36,8 @@ wasm = ["wasm-bindgen"]
 
 [dependencies]
 base64 = "0.22"
+vertrule-crypto = { path = "../vertrule-runtime/crates/vertrule-crypto" }
+# Sites 4/5 + result.rs pending ratification; see EDGE_CENSUS.
 blake3 = "1"
 ed25519-dalek = "2"
 hex = "0.4"
@@ -57,6 +59,9 @@ vr-jcs = { version = "0.4", path = "../vr-jcs" }
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
+# Test-only: byte-law oracles reproduce digests with the raw primitive,
+# deliberately not through the sealed constructor under test.
+blake3 = "1"
 anyhow = "1"
 
 
