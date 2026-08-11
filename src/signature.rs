@@ -51,7 +51,31 @@ const KEY_ID_HEX_LEN: usize = 24;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct KeyId(String);
 
+/// Byte width of the V1 key identifier: the **leading** 12 bytes of the
+/// digest. Protocol-visible as 24 lowercase hex characters.
+const KEY_ID_BYTE_LEN: usize = KEY_ID_HEX_LEN / 2;
+
 impl KeyId {
+    /// Derive the V1 key identifier from raw public-key bytes.
+    ///
+    /// ```text
+    /// KeyIdV1(pk) = lowerhex( BLAKE3(pk_bytes)[0..12] )
+    /// ```
+    ///
+    /// Ratified 2026-08-11 exactly as it already existed. The 96-bit width is
+    /// **frozen**: the value is protocol-visible (24 hex chars in signature
+    /// bundles), so changing the width, the truncation end, or the preimage
+    /// encoding is a `KeyIdV2` protocol migration — not digest-authority
+    /// cleanup. Pinned by `tests/key_id_v1_law_vectors.rs`.
+    ///
+    /// Equivalent to the sealed `OpaqueBytesDigest::to_truncated_hex(24)`;
+    /// the slice form is used so the constructor stays infallible.
+    #[must_use]
+    pub fn from_public_key_v1(public_key_bytes: &[u8; 32]) -> Self {
+        let digest = vertrule_crypto::identity::OpaqueBytesDigest::compute(public_key_bytes);
+        Self(hex::encode(&digest.bytes()[..KEY_ID_BYTE_LEN]))
+    }
+
     /// Parse and validate a hex string as a `KeyId`.
     ///
     /// # Errors
@@ -293,8 +317,7 @@ pub fn check_key_id_consistency(bundle: &SignatureBundle) -> bool {
 ///
 /// `key_id` = `hex(BLAKE3(public_key_bytes)[..12])` = 24 hex chars.
 fn validate_key_id_matches(key: &VerifyingKey, expected: &KeyId) -> Result<(), VerifyError> {
-    let hash = blake3::hash(key.as_bytes());
-    let computed = hex::encode(&hash.as_bytes()[..12]);
+    let computed = KeyId::from_public_key_v1(key.as_bytes()).as_hex().to_string();
 
     if computed != expected.as_hex() {
         return Err(VerifyError::SignatureInvalid {
