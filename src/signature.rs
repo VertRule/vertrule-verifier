@@ -51,10 +51,6 @@ const KEY_ID_HEX_LEN: usize = 24;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct KeyId(String);
 
-/// Byte width of the V1 key identifier: the **leading** 12 bytes of the
-/// digest. Protocol-visible as 24 lowercase hex characters.
-const KEY_ID_BYTE_LEN: usize = KEY_ID_HEX_LEN / 2;
-
 impl KeyId {
     /// Derive the V1 key identifier from raw public-key bytes.
     ///
@@ -71,9 +67,12 @@ impl KeyId {
     /// Equivalent to the sealed `OpaqueBytesDigest::to_truncated_hex(24)`;
     /// the slice form is used so the constructor stays infallible.
     #[must_use]
-    pub fn from_public_key_v1(public_key_bytes: &[u8; 32]) -> Self {
-        let digest = vertrule_crypto::identity::OpaqueBytesDigest::compute(public_key_bytes);
-        Self(hex::encode(&digest.bytes()[..KEY_ID_BYTE_LEN]))
+    pub fn from_public_key_v1(public_key_bytes: &[u8]) -> Self {
+        // The law — truncation *and* rendering — lives in `vertrule-crypto`.
+        // `KeyId` owns typed use and validation of a key id; it does not own
+        // what a key id is. Consolidated 2026-08-11 so the seven independent
+        // implementations became one.
+        Self(vertrule_crypto::identity::key_id_v1(public_key_bytes))
     }
 
     /// Parse and validate a hex string as a `KeyId`.
