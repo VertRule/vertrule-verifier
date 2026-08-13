@@ -316,7 +316,9 @@ pub fn check_key_id_consistency(bundle: &SignatureBundle) -> bool {
 ///
 /// `key_id` = `hex(BLAKE3(public_key_bytes)[..12])` = 24 hex chars.
 fn validate_key_id_matches(key: &VerifyingKey, expected: &KeyId) -> Result<(), VerifyError> {
-    let computed = KeyId::from_public_key_v1(key.as_bytes()).as_hex().to_string();
+    let computed = KeyId::from_public_key_v1(key.as_bytes())
+        .as_hex()
+        .to_string();
 
     if computed != expected.as_hex() {
         return Err(VerifyError::SignatureInvalid {
