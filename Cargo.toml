@@ -48,7 +48,7 @@ thiserror = "2"
 # `ReceiptEnvelope` instance than `vr-dmca-pack` (and other adapters)
 # depended on, producing E0308 type-mismatch errors at every boundary
 # crossing between the two crates.
-vertrule-schemas = { version = "0.4", path = "../vertrule-schemas" }
+vertrule-schemas = { version = "0.5", path = "../vertrule-schemas" }
 # Receipt-identity law owner (Stage 2 extraction): the verifier recomputes
 # `event_hash` through this crate, not through the transitional copy still in
 # `vertrule-schemas`. Same physical `vertrule-schemas` resolves transitively.
