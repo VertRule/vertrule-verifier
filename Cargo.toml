@@ -48,6 +48,12 @@ thiserror = "2"
 # `ReceiptEnvelope` instance than `vr-dmca-pack` (and other adapters)
 # depended on, producing E0308 type-mismatch errors at every boundary
 # crossing between the two crates.
+#
+# PRE-RELEASE INTEGRATION: `0.5` is not yet published. This resolves only
+# through the sibling `path`, so the current state is staged source
+# integration — **not independently reproducible verifier state** — until
+# vertrule-schemas 0.5.0 exists in the intended registry
+# (vertrule-schemas#3). Remove this note once it does.
 vertrule-schemas = { version = "0.5", path = "../vertrule-schemas" }
 # Receipt-identity law owner (Stage 2 extraction): the verifier recomputes
 # `event_hash` through this crate, not through the transitional copy still in
